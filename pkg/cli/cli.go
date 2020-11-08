@@ -15,7 +15,7 @@ import (
 
 var AllowedProviders = [...]string{"steam"}
 
-const OutputPath string = "~/Developer/games-screenshot-manager/Output"
+const OutputPath string = "./Output/"
 
 func main() {
 	Start()

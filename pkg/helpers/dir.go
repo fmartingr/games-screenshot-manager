@@ -7,7 +7,7 @@ import (
 )
 
 func ExpandUser(providedPath string) string {
-	var path string
+	var path string = providedPath
 	usr, _ := user.Current()
 	dir := usr.HomeDir
 
