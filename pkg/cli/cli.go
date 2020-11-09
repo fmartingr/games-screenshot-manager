@@ -7,26 +7,28 @@ import (
 	"os"
 	"path"
 	"strconv"
+	"strings"
 
 	"github.com/fmartingr/games-screenshot-mananger/pkg/games"
 	"github.com/fmartingr/games-screenshot-mananger/pkg/helpers"
 	"github.com/fmartingr/games-screenshot-mananger/pkg/providers/steam"
 )
 
-var AllowedProviders = [...]string{"steam"}
+var allowedProviders = [...]string{"steam"}
 
-const OutputPath string = "./Output/"
-
-func main() {
-	Start()
-}
+const defaultOutputPath string = "./Output"
+const defaultProvider string = "steam"
+const defaultDryRun bool = false
 
 func Start() {
-	var provider = flag.String("provider", "steam", "steam")
+	var provider = flag.String("provider", defaultProvider, "steam")
+	var outputPath = flag.String("output-path", defaultOutputPath, "The destination path of the screenshots")
+	var dryRun = flag.Bool("dry-run", defaultDryRun, "Use to disable write actions on filesystem")
+
 	flag.Parse()
-	if helpers.SliceContainsString(AllowedProviders[:], *provider, nil) {
+	if helpers.SliceContainsString(allowedProviders[:], *provider, nil) {
 		games := getGamesFromProvider(*provider)
-		processGames(games)
+		processGames(games, *outputPath, *dryRun)
 	} else {
 		log.Printf("Provider %s not found!", *provider)
 	}
@@ -40,11 +42,9 @@ func getGamesFromProvider(provider string) []games.Game {
 	return games
 }
 
-func processGames(games []games.Game) {
-	dryRun := false
-
+func processGames(games []games.Game, outputPath string, dryRun bool) {
 	for _, game := range games {
-		destinationPath := path.Join(helpers.ExpandUser(OutputPath), game.Platform)
+		destinationPath := path.Join(helpers.ExpandUser(outputPath), game.Platform)
 		if len(game.Name) > 0 {
 			destinationPath = path.Join(destinationPath, game.Name)
 		} else {
@@ -84,7 +84,9 @@ func processGames(games []games.Game) {
 				}
 
 			} else {
-				if !dryRun {
+				if dryRun {
+					log.Println(path.Base(screenshot.Path), " -> ", strings.Replace(destinationPath, helpers.ExpandUser(outputPath), "", 1))
+				} else {
 					helpers.CopyFile(screenshot.Path, destinationPath)
 				}
 			}
