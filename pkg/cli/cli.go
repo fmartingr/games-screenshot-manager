@@ -57,14 +57,9 @@ func processGames(games []games.Game, outputPath string, dryRun bool) {
 			os.MkdirAll(destinationPath, 0711)
 		}
 
-		log.Printf("=> Proceesing screenshots for %s", game.Name)
+		log.Printf("=> Proceesing screenshots for %s %s", game.Name, game.Notes)
 		for _, screenshot := range game.Screenshots {
-			fileStat, statErr := os.Stat(screenshot.Path)
-			if statErr != nil {
-				log.Fatal(statErr)
-			}
-
-			destinationPath := path.Join(destinationPath, fileStat.ModTime().Format("2006-01-02_15-04-05")+path.Ext(screenshot.Path))
+			destinationPath := path.Join(destinationPath, screenshot.GetDestinationName())
 
 			if _, err := os.Stat(destinationPath); !os.IsNotExist(err) {
 				sourceMd5, err := helpers.Md5File(screenshot.Path)
