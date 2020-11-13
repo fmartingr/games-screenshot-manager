@@ -11,18 +11,22 @@ import (
 
 	"github.com/fmartingr/games-screenshot-mananger/pkg/games"
 	"github.com/fmartingr/games-screenshot-mananger/pkg/helpers"
+	"github.com/fmartingr/games-screenshot-mananger/pkg/providers/minecraft"
 	"github.com/fmartingr/games-screenshot-mananger/pkg/providers/steam"
 )
 
-var allowedProviders = [...]string{"steam"}
+var allowedProviders = [...]string{"steam", "minecraft"}
 
 const defaultOutputPath string = "./Output"
+
+// const defaultInputPath string = "./Input"
 const defaultProvider string = "steam"
 const defaultDryRun bool = false
 
 func Start() {
 	var provider = flag.String("provider", defaultProvider, "steam")
 	var outputPath = flag.String("output-path", defaultOutputPath, "The destination path of the screenshots")
+	// var inputPath = flag.String("input-path", defaultInputPath, "Input path for the provider that requires it")
 	var dryRun = flag.Bool("dry-run", defaultDryRun, "Use to disable write actions on filesystem")
 
 	flag.Parse()
@@ -38,6 +42,8 @@ func getGamesFromProvider(provider string) []games.Game {
 	var games []games.Game
 	if provider == "steam" {
 		games = append(games, steam.GetGames()...)
+	} else if provider == "minecraft" {
+		games = append(games, minecraft.GetGames()...)
 	}
 	return games
 }
