@@ -4,9 +4,10 @@ A simple tool to collect and sort games screenshots from different platforms.
 
 ## Supported platforms
 
-| Name | Comments |
+| Name | Supported OS |
 | --- | --- |
-| Steam | Linux only at the moment
+| Steam | Linux
+| Minecraft | Linux, Linux Flatpak, macOS, Windows
 
 ## How it works
 
