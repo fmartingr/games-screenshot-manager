@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
@@ -39,6 +40,21 @@ func (appList SteamAppList) FindID(id uint64) (SteamApp, error) {
 
 type SteamAppListResponse struct {
 	AppList SteamAppList `json:"applist"`
+}
+
+func getBasePathForOS() string {
+	var path string
+	switch runtime.GOOS {
+	case "darwin":
+		path = helpers.ExpandUser("~/Library/Application Support/Steam")
+	case "linux":
+		path = helpers.ExpandUser("~/.local/share/Steam")
+	case "windows":
+		path = "C:\\Program Files (x86)\\Steam"
+	default:
+		log.Panic("Unsupported OS: ", runtime.GOOS)
+	}
+	return path
 }
 
 func GetSteamAppsList(c chan SteamAppList) {
@@ -80,19 +96,19 @@ func GetSteamAppsList(c chan SteamAppList) {
 
 func GuessUsers() []string {
 	var users []string
+	var path string = filepath.Join(getBasePathForOS(), "userdata")
+	log.Println(path)
 
-	if runtime.GOOS == "linux" {
-		if _, err := os.Stat(helpers.ExpandUser("~/.local/share/Steam/userdata")); !os.IsNotExist(err) {
-			files, err := ioutil.ReadDir(helpers.ExpandUser("~/.local/share/Steam/userdata"))
-			if err != nil {
-				log.Fatal(err)
-			}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		files, err := ioutil.ReadDir(path)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-			for _, file := range files {
-				if _, err := strconv.ParseInt(file.Name(), 10, 64); err == nil {
-					log.Printf("Found local install Steam user: %s", file.Name())
-					users = append(users, file.Name())
-				}
+		for _, file := range files {
+			if _, err := strconv.ParseInt(file.Name(), 10, 64); err == nil {
+				log.Printf("Found local install Steam user: %s", file.Name())
+				users = append(users, file.Name())
 			}
 		}
 	}
@@ -102,29 +118,28 @@ func GuessUsers() []string {
 func GetGamesFromUser(user string) []uint64 {
 	log.Println("Getting Steam games for user: " + user)
 	var userGames []uint64
-	path := helpers.ExpandUser("~/.local/share/Steam/userdata/" + user + "/760/remote")
+	var path string = filepath.Join(getBasePathForOS(), "userdata", user, "760", "remote")
 
-	if runtime.GOOS == "linux" {
-		if _, err := os.Stat(path); !os.IsNotExist(err) {
-			files, err := ioutil.ReadDir(path)
-			if err != nil {
-				log.Fatal(err)
-			}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		files, err := ioutil.ReadDir(path)
+		if err != nil {
+			log.Fatal(err)
+		}
 
-			for _, file := range files {
-				// len(file.Name()) == 20 -> Custom added Game to steam
-				gameID, err := strconv.ParseUint(file.Name(), 10, 64)
-				if err == nil {
-					userGames = append(userGames, gameID)
-				}
+		for _, file := range files {
+			// len(file.Name()) == 20 -> Custom added Game to steam
+			gameID, err := strconv.ParseUint(file.Name(), 10, 64)
+			if err == nil {
+				userGames = append(userGames, gameID)
 			}
 		}
 	}
+
 	return userGames
 }
 
 func GetScreenshotsForGame(user string, game *games.Game) {
-	path := helpers.ExpandUser("~/.local/share/Steam/userdata/" + user + "/760/remote/" + strconv.FormatUint(game.ID, 10) + "/screenshots")
+	path := filepath.Join(getBasePathForOS(), "userdata", user, "/760/remote/", strconv.FormatUint(game.ID, 10), "screenshots")
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
 		log.Fatal(err)
