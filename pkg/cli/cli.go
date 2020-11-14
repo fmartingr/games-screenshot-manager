@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -50,12 +51,12 @@ func getGamesFromProvider(provider string) []games.Game {
 
 func processGames(games []games.Game, outputPath string, dryRun bool) {
 	for _, game := range games {
-		destinationPath := path.Join(helpers.ExpandUser(outputPath), game.Platform)
+		destinationPath := filepath.Join(helpers.ExpandUser(outputPath), game.Platform)
 		if len(game.Name) > 0 {
-			destinationPath = path.Join(destinationPath, game.Name)
+			destinationPath = filepath.Join(destinationPath, game.Name)
 		} else {
 			log.Printf("[IMPORTANT] Game ID %d has no name!", game.ID)
-			destinationPath = path.Join(destinationPath, strconv.FormatUint(game.ID, 10))
+			destinationPath = filepath.Join(destinationPath, strconv.FormatUint(game.ID, 10))
 		}
 
 		// Check if folder exists
@@ -65,7 +66,7 @@ func processGames(games []games.Game, outputPath string, dryRun bool) {
 
 		log.Printf("=> Proceesing screenshots for %s %s", game.Name, game.Notes)
 		for _, screenshot := range game.Screenshots {
-			destinationPath := path.Join(destinationPath, screenshot.GetDestinationName())
+			destinationPath := filepath.Join(destinationPath, screenshot.GetDestinationName())
 
 			if _, err := os.Stat(destinationPath); !os.IsNotExist(err) {
 				sourceMd5, err := helpers.Md5File(screenshot.Path)

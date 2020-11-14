@@ -4,7 +4,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -41,9 +41,9 @@ func GetGames() []games.Game {
 		getScreenshotsFromPath(&minecraftFlatpak, "~/.var/app/com.mojang.Minecraft/.minecraft/screenshots")
 		result = append(result, minecraftFlatpak)
 	} else if runtime.GOOS == "windows" {
-		getScreenshotsFromPath(&minecraftStandalone, path.Join(os.Getenv("APPDATA"), ".minecraft/screenshots"))
+		getScreenshotsFromPath(&minecraftStandalone, filepath.Join(os.Getenv("APPDATA"), ".minecraft/screenshots"))
 	} else if runtime.GOOS == "darwin" {
-		getScreenshotsFromPath(&minecraftStandalone, path.Join(helpers.ExpandUser("~/Library/Application Support/minecraft/screenshots")))
+		getScreenshotsFromPath(&minecraftStandalone, filepath.Join(helpers.ExpandUser("~/Library/Application Support/minecraft/screenshots")))
 	}
 	result = append(result, minecraftStandalone)
 
