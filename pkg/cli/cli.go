@@ -60,7 +60,7 @@ func processGames(games []games.Game, outputPath string, dryRun bool) {
 		}
 
 		// Check if folder exists
-		if _, err := os.Stat(destinationPath); os.IsNotExist(err) {
+		if _, err := os.Stat(destinationPath); os.IsNotExist(err) && !dryRun {
 			os.MkdirAll(destinationPath, 0711)
 		}
 
