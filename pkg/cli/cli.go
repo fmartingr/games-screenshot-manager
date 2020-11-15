@@ -41,9 +41,10 @@ func Start() {
 
 func getGamesFromProvider(provider string) []games.Game {
 	var games []games.Game
-	if provider == "steam" {
+	switch provider {
+	case "steam":
 		games = append(games, steam.GetGames()...)
-	} else if provider == "minecraft" {
+	case "minecraft":
 		games = append(games, minecraft.GetGames()...)
 	}
 	return games
