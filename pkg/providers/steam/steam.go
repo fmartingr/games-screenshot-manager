@@ -5,8 +5,6 @@ import (
 	"errors"
 	"io/ioutil"
 	"log"
-	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -18,6 +16,7 @@ import (
 )
 
 const providerName string = "steam"
+const gameListURL string = "https://api.steampowered.com/ISteamApps/GetAppList/v2/"
 
 type SteamApp struct {
 	AppID uint64 `json:"appid"`
@@ -57,19 +56,9 @@ func getBasePathForOS() string {
 	return path
 }
 
-func GetSteamAppsList(c chan SteamAppList) {
+func getSteamAppList(c chan SteamAppList) {
 	log.Println("Updating steam game list...")
-	steamGetAppListURL, _ := url.Parse("https://api.steampowered.com/ISteamApps/GetAppList/v2/")
-	request := http.Request{
-		Method: "GET",
-		URL:    steamGetAppListURL,
-		Header: map[string][]string{
-			"User-Agent": {"games-screenshot-manager/0.0.1"},
-		},
-		ProtoMajor: 2,
-		ProtoMinor: 1,
-	}
-	response, err := http.DefaultClient.Do(&request)
+	response, err := helpers.DoRequest("GET", gameListURL)
 	if err != nil {
 		panic(err)
 	}
@@ -160,7 +149,7 @@ func GetScreenshotsForGame(user string, game *games.Game) {
 func GetGames() []games.Game {
 	var localGames []games.Game
 	c := make(chan SteamAppList)
-	go GetSteamAppsList(c)
+	go getSteamAppList(c)
 	users := GuessUsers()
 	steamApps := <-c
 	for _, userID := range users {
