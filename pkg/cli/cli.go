@@ -56,8 +56,8 @@ func processGames(games []games.Game, outputPath string, dryRun bool) {
 		if len(game.Name) > 0 {
 			destinationPath = filepath.Join(destinationPath, game.Name)
 		} else {
-			log.Printf("[IMPORTANT] Game ID %d has no name!", game.ID)
-			destinationPath = filepath.Join(destinationPath, strconv.FormatUint(game.ID, 10))
+			log.Printf("[IMPORTANT] Game ID %s has no name!", game.ID)
+			destinationPath = filepath.Join(destinationPath, game.ID)
 		}
 
 		// Check if folder exists

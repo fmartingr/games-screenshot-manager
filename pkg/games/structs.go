@@ -7,7 +7,7 @@ import (
 )
 
 type Game struct {
-	ID          uint64
+	ID          string
 	Name        string
 	Platform    string
 	Provider    string

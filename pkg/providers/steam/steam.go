@@ -27,10 +27,14 @@ type SteamAppList struct {
 	Apps []SteamApp `json:"apps"`
 }
 
-func (appList SteamAppList) FindID(id uint64) (SteamApp, error) {
+func (appList SteamAppList) FindID(id string) (SteamApp, error) {
 	GameIDNotFound := errors.New("Game ID not found")
 	for _, game := range appList.Apps {
-		if game.AppID == id {
+		uintGameID, err := strconv.ParseUint(id, 10, 64)
+		if err != nil {
+			log.Panic(err)
+		}
+		if game.AppID == uintGameID {
 			return game, nil
 		}
 	}
@@ -86,7 +90,6 @@ func getSteamAppList(c chan SteamAppList) {
 func GuessUsers() []string {
 	var users []string
 	var path string = filepath.Join(getBasePathForOS(), "userdata")
-	log.Println(path)
 
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		files, err := ioutil.ReadDir(path)
@@ -104,9 +107,9 @@ func GuessUsers() []string {
 	return users
 }
 
-func GetGamesFromUser(user string) []uint64 {
+func GetGamesFromUser(user string) []string {
 	log.Println("Getting Steam games for user: " + user)
-	var userGames []uint64
+	var userGames []string
 	var path string = filepath.Join(getBasePathForOS(), "userdata", user, "760", "remote")
 
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
@@ -117,10 +120,7 @@ func GetGamesFromUser(user string) []uint64 {
 
 		for _, file := range files {
 			// len(file.Name()) == 20 -> Custom added Game to steam
-			gameID, err := strconv.ParseUint(file.Name(), 10, 64)
-			if err == nil {
-				userGames = append(userGames, gameID)
-			}
+			userGames = append(userGames, file.Name())
 		}
 	}
 
@@ -128,7 +128,7 @@ func GetGamesFromUser(user string) []uint64 {
 }
 
 func GetScreenshotsForGame(user string, game *games.Game) {
-	path := filepath.Join(getBasePathForOS(), "userdata", user, "/760/remote/", strconv.FormatUint(game.ID, 10), "screenshots")
+	path := filepath.Join(getBasePathForOS(), "userdata", user, "/760/remote/", game.ID, "screenshots")
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
 		log.Fatal(err)
