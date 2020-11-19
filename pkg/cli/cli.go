@@ -7,45 +7,47 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/fmartingr/games-screenshot-mananger/pkg/games"
 	"github.com/fmartingr/games-screenshot-mananger/pkg/helpers"
 	"github.com/fmartingr/games-screenshot-mananger/pkg/providers/minecraft"
+	"github.com/fmartingr/games-screenshot-mananger/pkg/providers/nintendo_switch"
 	"github.com/fmartingr/games-screenshot-mananger/pkg/providers/steam"
 )
 
-var allowedProviders = [...]string{"steam", "minecraft"}
+var allowedProviders = [...]string{"steam", "minecraft", "nintendo-switch"}
 
 const defaultOutputPath string = "./Output"
 
-// const defaultInputPath string = "./Input"
+const defaultInputPath string = ""
 const defaultProvider string = "steam"
 const defaultDryRun bool = false
 
 func Start() {
 	var provider = flag.String("provider", defaultProvider, "steam")
 	var outputPath = flag.String("output-path", defaultOutputPath, "The destination path of the screenshots")
-	// var inputPath = flag.String("input-path", defaultInputPath, "Input path for the provider that requires it")
+	var inputPath = flag.String("input-path", defaultInputPath, "Input path for the provider that requires it")
 	var dryRun = flag.Bool("dry-run", defaultDryRun, "Use to disable write actions on filesystem")
 
 	flag.Parse()
 	if helpers.SliceContainsString(allowedProviders[:], *provider, nil) {
-		games := getGamesFromProvider(*provider)
+		games := getGamesFromProvider(*provider, *inputPath)
 		processGames(games, *outputPath, *dryRun)
 	} else {
 		log.Printf("Provider %s not found!", *provider)
 	}
 }
 
-func getGamesFromProvider(provider string) []games.Game {
+func getGamesFromProvider(provider string, inputPath string) []games.Game {
 	var games []games.Game
 	switch provider {
 	case "steam":
 		games = append(games, steam.GetGames()...)
 	case "minecraft":
 		games = append(games, minecraft.GetGames()...)
+	case "nintendo-switch":
+		games = append(games, nintendo_switch.GetGames(inputPath)...)
 	}
 	return games
 }

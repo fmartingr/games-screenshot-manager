@@ -6,6 +6,8 @@ import (
 	"path"
 )
 
+const DatetimeFormat = "2006-01-02_15-04-05"
+
 type Game struct {
 	ID          string
 	Name        string
@@ -28,5 +30,5 @@ func (screenshot Screenshot) GetDestinationName() string {
 	if statErr != nil {
 		log.Fatal(statErr)
 	}
-	return fileStat.ModTime().Format("2006-01-02_15-04-05") + path.Ext(screenshot.Path)
+	return fileStat.ModTime().Format(DatetimeFormat) + path.Ext(screenshot.Path)
 }

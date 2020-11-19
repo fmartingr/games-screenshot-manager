@@ -2,12 +2,15 @@
 
 A simple tool to collect and sort games screenshots from different platforms.
 
-## Supported platforms
+## Supported providers
 
-| Name | Supported OS |
-| --- | --- |
-| Steam | Linux, macOS, Windows
-| Minecraft | Linux, Linux Flatpak, macOS, Windows
+Use the appropriate ID with the `-provider` flag. [See examples below](#Usage)
+
+| Name | ID | Notes |
+| --- | --- | --- |
+| Steam | `steam` | Linux, macOS, Windows
+| Minecraft | `minecraft` | Linux, Linux Flatpak, macOS, Windows
+| Nintendo Switch | `nintend-switch` | Requires `-input-path` |
 
 ## How it works
 
@@ -36,4 +39,7 @@ games-screenshot-manager -provider steam -output-path ./Output
 
 # Perform a dry run (see what's gonna get copied where)
 games-screenshot-mananger -provider steam -dry-run
+
+# Parse all Nintendo Switch screenshots
+games-screenshot-manager -provider nintendo-switch -input-path ./Album
 ```
