@@ -10,7 +10,7 @@ Use the appropriate ID with the `-provider` flag. [See examples below](#Usage)
 | --- | --- | --- |
 | Steam | `steam` | Linux, macOS, Windows
 | Minecraft | `minecraft` | Linux, Linux Flatpak, macOS, Windows
-| Nintendo Switch | `nintend-switch` | Requires `-input-path` |
+| Nintendo Switch | `nintendo-switch` | Requires `-input-path` |
 
 ## How it works
 
