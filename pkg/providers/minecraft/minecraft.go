@@ -38,7 +38,9 @@ func GetGames() []games.Game {
 
 		// Flatpak minecraft
 		minecraftFlatpak := games.Game{Name: "Minecraft", Platform: "PC", Notes: "Flatpak"}
-		getScreenshotsFromPath(&minecraftFlatpak, "~/.var/app/com.mojang.Minecraft/.minecraft/screenshots")
+		for _, path := range [2]string{"~/.var/app/com.mojang.Minecraft/.minecraft/screenshots", "~/.var/app/com.mojang.Minecraft/data/minecraft/screenshots"} {
+			getScreenshotsFromPath(&minecraftFlatpak, path)
+		}
 		result = append(result, minecraftFlatpak)
 	} else if runtime.GOOS == "windows" {
 		getScreenshotsFromPath(&minecraftStandalone, filepath.Join(os.Getenv("APPDATA"), ".minecraft/screenshots"))
