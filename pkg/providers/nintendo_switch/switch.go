@@ -14,10 +14,10 @@ import (
 )
 
 const providerName = "nintendo-switch"
-const gameListURL = "https://fmartingr.github.io/switch-games-json/switch_games.json"
+const gameListURL = "https://fmartingr.github.io/switch-games-json/switch_id_names.json"
 
 type SwitchGame struct {
-	Name            string `json:"description"`
+	Name            string `json:"title_normalized"`
 	EncryptedGameID string `json:"encrypted_game_id"`
 }
 
