@@ -2,6 +2,7 @@ package nintendo_switch
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"log"
 	"os"
@@ -76,9 +77,52 @@ func addScreenshotToGame(userGames []games.Game, switchGame SwitchGame, screensh
 	return userGames
 }
 
-func GetGames(inputPath string) []games.Game {
+type EShopGame struct {
+	Title              string `json:"title"`
+	MenuSquareCoverURL string `json:"image_url_sq_s"`
+	H2X1CoverURL       string `json:"image_url_h2x1_s"`
+}
+
+func GetEshopGameList() []EShopGame {
+	var result []EShopGame
+
+	for _, region := range []string{"eu", "us", "jp"} {
+		var games []EShopGame
+		data, err := ioutil.ReadFile("./games_" + region + ".json")
+		if err != nil {
+			log.Panic(err)
+		}
+
+		errUnmarshal := json.Unmarshal(data, &games)
+		if errUnmarshal != nil {
+			log.Panic(err)
+		}
+		result = append(result, games...)
+	}
+	return result
+}
+
+func DownloadGameCoverForGame(eShopGames []EShopGame, gameName string) (string, error) {
+	for gameIndex := range eShopGames {
+		if eShopGames[gameIndex].Title == gameName {
+			coverPath, err := helpers.DownloadURLIntoTempFile(eShopGames[gameIndex].MenuSquareCoverURL)
+			if err != nil {
+				return "", err
+			} else {
+				return coverPath, nil
+			}
+		}
+	}
+	return "", errors.New("Game not found")
+}
+
+func GetGames(inputPath string, downloadCovers bool) []games.Game {
 	switchGames := getSwitchGameList()
 	var userGames []games.Game
+
+	if downloadCovers {
+		log.Println("[info] Downloading covers for Nintendo Switch on a best-effort basis")
+	}
 
 	err := filepath.Walk(inputPath,
 		func(path string, info os.FileInfo, err error) error {
@@ -107,5 +151,18 @@ func GetGames(inputPath string) []games.Game {
 	if err != nil {
 		log.Panic(err)
 	}
+
+	if downloadCovers {
+		eshopGameList := GetEshopGameList()
+		for userGameIndex := range userGames {
+			coverPath, err := DownloadGameCoverForGame(eshopGameList, userGames[userGameIndex].Name)
+			if err == nil {
+				userGames[userGameIndex].Cover = games.Screenshot{Path: coverPath, DestinationName: ".cover"}
+			} else {
+				log.Printf("[info] Cover not found for game %s: %s", userGames[userGameIndex].Name, err)
+			}
+		}
+	}
+
 	return userGames
 }
