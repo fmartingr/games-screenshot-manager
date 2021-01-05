@@ -14,6 +14,7 @@ import (
 	"github.com/fmartingr/games-screenshot-mananger/pkg/providers/minecraft"
 	"github.com/fmartingr/games-screenshot-mananger/pkg/providers/nintendo_switch"
 	"github.com/fmartingr/games-screenshot-mananger/pkg/providers/steam"
+	"github.com/gosimple/slug"
 )
 
 var allowedProviders = [...]string{"steam", "minecraft", "nintendo-switch"}
@@ -51,7 +52,7 @@ func getGamesFromProvider(provider string, inputPath string, downloadCovers bool
 	case "minecraft":
 		games = append(games, minecraft.GetGames()...)
 	case "nintendo-switch":
-		games = append(games, nintendo_switch.GetGames(inputPath)...)
+		games = append(games, nintendo_switch.GetGames(inputPath, downloadCovers)...)
 	}
 	return games
 }
@@ -68,7 +69,12 @@ func processGames(games []games.Game, outputPath string, dryRun bool, downloadCo
 
 		// Check if folder exists
 		if _, err := os.Stat(destinationPath); os.IsNotExist(err) && !dryRun {
-			os.MkdirAll(destinationPath, 0711)
+			mkdirErr := os.MkdirAll(destinationPath, 0711)
+			if mkdirErr != nil {
+				log.Printf("[ERROR] Couldn't create directory with name %s, falling back to %s", game.Name, slug.Make(game.Name))
+				destinationPath = filepath.Join(helpers.ExpandUser(outputPath), game.Platform, slug.Make(game.Name))
+				os.MkdirAll(destinationPath, 0711)
+			}
 		}
 
 		if downloadCovers && !dryRun {
