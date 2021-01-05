@@ -88,29 +88,13 @@ func getSteamAppList(c chan SteamAppList) {
 	c <- steamListResponse.AppList
 }
 
-func downloadGameHeaderImage(appId string) string {
-	response, err := helpers.DoRequest("GET", "https://cdn.cloudflare.steamstatic.com/steam/apps/"+appId+"/header.jpg")
+func downloadGameHeaderImage(appId string) (string, error) {
+	url := "https://cdn.cloudflare.steamstatic.com/steam/apps/" + appId + "/header.jpg"
+	coverURL, err := helpers.DownloadURLIntoTempFile(url)
 	if err != nil {
-		panic(err)
+		return "", err
 	}
-
-	if response.Body != nil {
-		defer response.Body.Close()
-	}
-
-	tmpfile, err := ioutil.TempFile("", "games-screenshot-manager-cover")
-	if err != nil {
-		panic(err)
-	}
-
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		panic(err)
-	}
-
-	tmpfile.Write(body)
-
-	return tmpfile.Name()
+	return coverURL, nil
 }
 
 func GuessUsers() []string {
@@ -188,7 +172,10 @@ func GetGames(downloadCovers bool) []games.Game {
 			userGame := games.Game{ID: userGameID, Name: steamGame.Name, Provider: providerName, Platform: "PC"}
 
 			if downloadCovers {
-				userGame.Cover = games.Screenshot{Path: downloadGameHeaderImage(userGameID), DestinationName: ".cover"}
+				coverPath, err := downloadGameHeaderImage(userGameID)
+				if err == nil {
+					userGame.Cover = games.Screenshot{Path: coverPath, DestinationName: ".cover"}
+				}
 			}
 
 			log.Printf("Found Steam game for user %s: %s (%s)", userID, userGame.Name, userGame.ID)
