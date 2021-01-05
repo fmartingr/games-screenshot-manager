@@ -52,7 +52,7 @@ func getGamesFromProvider(provider string, inputPath string, downloadCovers bool
 	case "minecraft":
 		games = append(games, minecraft.GetGames()...)
 	case "nintendo-switch":
-		games = append(games, nintendo_switch.GetGames(inputPath, downloadCovers)...)
+		games = append(games, nintendo_switch.GetGames(inputPath)...)
 	}
 	return games
 }
