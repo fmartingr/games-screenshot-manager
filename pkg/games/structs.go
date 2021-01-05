@@ -15,6 +15,7 @@ type Game struct {
 	Provider    string
 	Screenshots []Screenshot
 	Notes       string
+	Cover       Screenshot
 }
 
 type Screenshot struct {
