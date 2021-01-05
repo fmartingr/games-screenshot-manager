@@ -77,7 +77,7 @@ func processGames(games []games.Game, outputPath string, dryRun bool, downloadCo
 			}
 		}
 
-		if downloadCovers && !dryRun {
+		if downloadCovers && !dryRun && game.Cover.Path != "" {
 			destinationCoverPath := filepath.Join(destinationPath, game.Cover.DestinationName)
 
 			if _, err := os.Stat(destinationCoverPath); os.IsNotExist(err) {
