@@ -14,6 +14,7 @@ import (
 )
 
 const providerName = "nintendo-switch"
+const platformName = "Nintendo Switch"
 const gameListURL = "https://fmartingr.github.io/switch-games-json/switch_id_names.json"
 
 type SwitchGame struct {
@@ -68,7 +69,7 @@ func addScreenshotToGame(userGames []games.Game, switchGame SwitchGame, screensh
 	}
 
 	if foundGame.ID == "" {
-		foundGame := games.Game{Name: switchGame.Name, ID: switchGame.EncryptedGameID, Platform: "Nintendo Switch", Provider: providerName}
+		foundGame := games.Game{Name: switchGame.Name, ID: switchGame.EncryptedGameID, Platform: platformName, Provider: providerName}
 		foundGame.Screenshots = append(foundGame.Screenshots, screenshot)
 		userGames = append(userGames, foundGame)
 	}
