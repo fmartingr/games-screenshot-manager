@@ -8,10 +8,11 @@ Use the appropriate ID with the `-provider` flag. [See examples below](#Usage)
 
 | Name | ID | Notes | Covers |
 | --- | --- | --- | --- |
-| Steam | `steam` | Linux, macOS, Windows | Yes [Example](https://steamcdn-a.akamaihd.net/steam/apps/377840/header.jpg) |
+| Steam | `steam` | Linux, macOS, Windows | Yes ([Example](https://steamcdn-a.akamaihd.net/steam/apps/377840/header.jpg)) |
 | Minecraft | `minecraft` | Linux, Linux Flatpak, macOS, Windows | No |
 | Nintendo Switch | `nintendo-switch` | Requires `-input-path` | No |
 | PlayStation 4 | `playstation-4` | Requires `-input-path` | No |
+| RetroArch | `retroarch` | Requires `-input-path` | No |
 
 ## How it works
 

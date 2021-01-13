@@ -14,11 +14,12 @@ import (
 	"github.com/fmartingr/games-screenshot-mananger/pkg/providers/minecraft"
 	"github.com/fmartingr/games-screenshot-mananger/pkg/providers/nintendo_switch"
 	"github.com/fmartingr/games-screenshot-mananger/pkg/providers/playstation4"
+	"github.com/fmartingr/games-screenshot-mananger/pkg/providers/retroarch"
 	"github.com/fmartingr/games-screenshot-mananger/pkg/providers/steam"
 	"github.com/gosimple/slug"
 )
 
-var allowedProviders = [...]string{"steam", "minecraft", "nintendo-switch", "playstation-4"}
+var allowedProviders = [...]string{"steam", "minecraft", "nintendo-switch", "playstation-4", "retroarch"}
 
 const defaultOutputPath string = "./Output"
 
@@ -56,6 +57,8 @@ func getGamesFromProvider(provider string, inputPath string, downloadCovers bool
 		games = append(games, nintendo_switch.GetGames(inputPath)...)
 	case "playstation-4":
 		games = append(games, playstation4.GetGames(inputPath)...)
+	case "retroarch":
+		games = append(games, retroarch.GetGames(inputPath)...)
 	}
 	return games
 }
