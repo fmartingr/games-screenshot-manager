@@ -3,7 +3,7 @@ package games
 import (
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 )
 
 const DatetimeFormat = "2006-01-02_15-04-05"
@@ -31,5 +31,5 @@ func (screenshot Screenshot) GetDestinationName() string {
 	if statErr != nil {
 		log.Fatal(statErr)
 	}
-	return fileStat.ModTime().Format(DatetimeFormat) + path.Ext(screenshot.Path)
+	return fileStat.ModTime().Format(DatetimeFormat) + filepath.Ext(screenshot.Path)
 }
