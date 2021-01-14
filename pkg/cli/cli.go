@@ -72,6 +72,11 @@ func processGames(games []games.Game, outputPath string, dryRun bool, downloadCo
 			destinationPath = filepath.Join(destinationPath, game.ID)
 		}
 
+		// Do not continue if there's no screenshots
+		if len(game.Screenshots) == 0 {
+			continue
+		}
+
 		// Check if folder exists
 		if _, err := os.Stat(destinationPath); os.IsNotExist(err) && !dryRun {
 			mkdirErr := os.MkdirAll(destinationPath, 0711)
