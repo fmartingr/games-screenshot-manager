@@ -154,11 +154,24 @@ func GetGames(inputPath string, downloadCovers bool) []games.Game {
 
 	for playlistName := range playlists {
 		for _, item := range playlists[playlistName].Items {
+			var cover games.Screenshot
+
+			if downloadCovers {
+				coverURL := formatLibretroBoxartURL(playlistName, item.Label)
+				boxartPath, err := helpers.DownloadURLIntoTempFile(coverURL)
+				if err == nil {
+					cover = games.Screenshot{Path: boxartPath, DestinationName: ".cover"}
+				} else {
+					log.Printf("[error] Error downloading cover for %s: %s", item.Label, err)
+				}
+			}
+
 			userGames = append(userGames, games.Game{
 				Platform:    cleanPlatformName(playlistName),
 				Name:        cleanGameName(item.Label),
 				Provider:    providerName,
 				Screenshots: findScreenshotsForGame(item),
+				Cover:       cover,
 			})
 		}
 	}

@@ -12,7 +12,7 @@ Use the appropriate ID with the `-provider` flag. [See examples below](#Usage)
 | Minecraft | `minecraft` | Linux, Linux Flatpak, macOS, Windows | No |
 | Nintendo Switch | `nintendo-switch` | Requires `-input-path` | No |
 | PlayStation 4 | `playstation-4` | Requires `-input-path` | No |
-| RetroArch | `retroarch` | Requires `-input-path` | No |
+| RetroArch | `retroarch` | Requires `-input-path` | Yes |
 
 ## How it works
 
