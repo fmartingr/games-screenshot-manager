@@ -35,6 +35,8 @@ func DownloadURLIntoTempFile(requestURL string) (string, error) {
 		return "", err
 	}
 
+	defer tmpfile.Close()
+
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
 		return "", err
