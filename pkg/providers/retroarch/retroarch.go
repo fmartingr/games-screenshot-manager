@@ -118,18 +118,30 @@ func findScreenshotsForGame(item RetroArchPlaylistItem) []games.Screenshot {
 	for _, file := range files {
 		// Get all screenshots for the game, excluding state screenshots
 		if !file.IsDir() && strings.Contains(file.Name(), fileName) && strings.Contains(file.Name(), ".png") {
-			if strings.Contains(file.Name(), ".state.") || strings.Contains(file.Name(), "-cheevo-") {
-				// Ignore state and achievement screenshots?
+			if strings.Contains(file.Name(), ".state.") {
+				// Ignore state screenshots
 				continue
 			}
+
 			extension := filepath.Ext(file.Name())
-			screenshotDate, err := time.Parse(datetimeLayout, file.Name()[len(file.Name())-len(extension)-len(datetimeLayout):len(file.Name())-len(extension)])
-			if err == nil {
-				result = append(result, games.Screenshot{Path: filepath.Join(filePath, file.Name()), DestinationName: screenshotDate.Format(games.DatetimeFormat) + extension})
+			var screenshotDestinationName string
+
+			// Handle autoamtic achievement screenshots: get datetime from modtime
+			if strings.Contains(file.Name(), "-cheevo-") {
+				filenameParts := strings.Split(file.Name(), "-")
+				achievementID := strings.Replace(filenameParts[len(filenameParts)-1], extension, "", 1)
+				screenshotDestinationName = file.ModTime().Format(games.DatetimeFormat) + "_retroachievement-" + achievementID + extension
 			} else {
-				log.Printf("[error] Formatting screenshot %s: %s", file.Name(), err)
+				screenshotDate, err := time.Parse(datetimeLayout, file.Name()[len(file.Name())-len(extension)-len(datetimeLayout):len(file.Name())-len(extension)])
+				if err == nil {
+					screenshotDestinationName = screenshotDate.Format(games.DatetimeFormat) + extension
+				} else {
+					log.Printf("[error] Formatting screenshot %s: %s", file.Name(), err)
+					continue
+				}
 			}
 
+			result = append(result, games.Screenshot{Path: filepath.Join(filePath, file.Name()), DestinationName: screenshotDestinationName})
 		}
 	}
 	return result
