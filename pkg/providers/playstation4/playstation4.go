@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/rwcarlsen/goexif/exif"
+
 	"github.com/fmartingr/games-screenshot-mananger/pkg/games"
 )
 
@@ -41,23 +43,47 @@ func GetGames(inputPath string) []games.Game {
 			}
 
 			if !info.IsDir() {
+				var destinationName string
 				gameName := filepath.Base(filepath.Dir(filePath))
 				fileName := filepath.Base(filePath)
 				extension := filepath.Ext(filepath.Base(filePath))
 				layout := "20060102150405"
 
-				if len(fileName) >= len(layout)+len(extension) {
-					destinationName, err := time.Parse(layout, fileName[len(fileName)-len(extension)-len(layout):len(fileName)-len(extension)])
-
-					if err == nil {
-						screenshot := games.Screenshot{Path: filePath, DestinationName: destinationName.Format(games.DatetimeFormat) + extension}
-						userGames = addScreenshotToGame(userGames, gameName, screenshot)
-					} else {
-						log.Printf("File doesn't follow datetime convention: %s. (%s) skipping...", filePath, err)
+				if extension == ".jpg" {
+					fileDescriptor, errFileDescriptor := os.Open(filePath)
+					if errFileDescriptor != nil {
+						log.Printf("[warning] Couldn't open file %s: %s", fileName, errFileDescriptor)
+						return nil
 					}
-				} else {
-					log.Printf("File doesn't follow datetime convention: %s, skipping...", filePath)
+					exifData, errExifData := exif.Decode(fileDescriptor)
+					if errExifData != nil {
+						log.Printf("[Error] Decoding EXIF data from %s: %s", filePath, errExifData)
+						return nil
+					}
+					defer fileDescriptor.Close()
+
+					exifDateTime, _ := exifData.DateTime()
+					destinationName = exifDateTime.Format(games.DatetimeFormat)
+
+				} else if extension == ".mp4" {
+					if len(fileName) >= len(layout)+len(extension) {
+						videoDatetime, err := time.Parse(layout, fileName[len(fileName)-len(extension)-len(layout):len(fileName)-len(extension)])
+
+						if err == nil {
+							destinationName = videoDatetime.Format(games.DatetimeFormat)
+						} else {
+							log.Printf("[Warning] File does not follow datetime convention: %s. (%s) skipping...", fileName, err)
+							return nil
+						}
+					} else {
+						log.Printf("[Warning] File does not follow datetime convention: %s, skipping...", fileName)
+						return nil
+					}
 				}
+
+				screenshot := games.Screenshot{Path: filePath, DestinationName: destinationName + extension}
+				userGames = addScreenshotToGame(userGames, gameName, screenshot)
+
 			}
 
 			return nil
