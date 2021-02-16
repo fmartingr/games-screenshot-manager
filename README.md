@@ -6,19 +6,19 @@ A simple tool to collect and sort games screenshots from different platforms.
 
 Use the appropriate ID with the `-provider` flag. [See examples below](#Usage)
 
-| Name | ID | Notes | Covers |
-| --- | --- | --- | --- |
-| Steam | `steam` | Linux, macOS, Windows | Yes ([Example](https://steamcdn-a.akamaihd.net/steam/apps/377840/header.jpg)) |
-| Minecraft | `minecraft` | Linux, Linux Flatpak, macOS, Windows | No |
-| Nintendo Switch | `nintendo-switch` | Requires `-input-path` | No |
-| PlayStation 4 | `playstation-4` | Requires `-input-path` | No |
-| RetroArch | `retroarch` | Requires `-input-path` | Yes |
+| Name | ID | Linux | Windows | macOS | Covers | Notes |
+| ---- | -- | ----- | ------- | ----- | ------ | ----- |
+| Steam | `steam` | Yes | Yes | Yes | Yes | 
+| Minecraft | `minecraft` | Yes | Yes | Yes | No |
+| Nintendo Switch | `nintendo-switch` | - | - | - | No | Requires `-input-path` pointing to ALBUM folder
+| PlayStation 4 | `playstation-4` | - | - | - | No | Requires `-input-path` pointing to PS4 folder
+| RetroArch | `retroarch` | - | - | - | Yes | Requires `-input-path` pointing to Playlists folder
 
 ## How it works
 
-Each provider has it's own way of finding the screenshots, but ideally the screenshots folder for games are known to us users so we only need to traverse them and find image files.
+Each provider has it's own way of finding the screenshots, but ideally the screenshots folder for games are known to us users so we only need to traverse them and find image files except for installations that may vary (like Retroarch) or systems outside of the PC ecosystem (Playstation, Nintendo Switch).
 
-When talking about a game's store (Steam, for example) we need to retrieve a bit more info from internet to identify each game name from the internal ID used by Steam on disk.
+In some cases to have all the information for a particular provider we need to retrieve more data from the internet, for example the Steam game list to associate names to the IDs or in Nintendo Switch's case a community provided list to associate the internal ID with the Game's name.
 
 For more details, you can check out [the source code for all providers](https://github.com/fmartingr/games-screenshot-manager/tree/master/pkg/providers)
 
@@ -30,7 +30,9 @@ Optionally a cover image for a game can be downloaded and placed under a `.cover
 go get -u github.com/fmartingr/games-screenshot-manager
 ```
 
+<!--
 Or get a binary build from the [releases page](https://github.com/fmartingr/games-screenshot-manager/releases)
+-->
 
 ## Usage
 
