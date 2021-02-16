@@ -8,6 +8,13 @@ import (
 
 const DatetimeFormat = "2006-01-02_15-04-05"
 
+type CLIOptions struct {
+	OutputPath     *string
+	InputPath      *string
+	DownloadCovers *bool
+	DryRun         *bool
+}
+
 type Game struct {
 	ID          string
 	Name        string

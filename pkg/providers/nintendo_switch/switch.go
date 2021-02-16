@@ -77,11 +77,11 @@ func addScreenshotToGame(userGames []games.Game, switchGame SwitchGame, screensh
 	return userGames
 }
 
-func GetGames(inputPath string) []games.Game {
+func GetGames(cliOptions games.CLIOptions) []games.Game {
 	switchGames := getSwitchGameList()
 	var userGames []games.Game
 
-	err := filepath.Walk(inputPath,
+	err := filepath.Walk(*cliOptions.InputPath,
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err

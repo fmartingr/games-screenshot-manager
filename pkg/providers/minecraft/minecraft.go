@@ -28,7 +28,7 @@ func getScreenshotsFromPath(game *games.Game, path string) {
 	}
 }
 
-func GetGames() []games.Game {
+func GetGames(cliOptions games.CLIOptions) []games.Game {
 	var result []games.Game
 	// Standalone minecraft
 	minecraftStandalone := games.Game{Name: "Minecraft", Platform: "PC", Notes: "Standalone"}

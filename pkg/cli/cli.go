@@ -27,44 +27,45 @@ const defaultProvider string = "steam"
 const defaultDryRun bool = false
 const defaultDownloadCovers bool = false
 
-// TODO: Set CLI options into an options struct
-
 func Start() {
+	cliOptions := games.CLIOptions{
+		OutputPath:     flag.String("output-path", defaultOutputPath, "The destination path of the screenshots"),
+		InputPath:      flag.String("input-path", defaultInputPath, "Input path for the provider that requires it"),
+		DownloadCovers: flag.Bool("download-covers", defaultDownloadCovers, "use to enable the download of covers (if the provider supports it)"),
+		DryRun:         flag.Bool("dry-run", defaultDryRun, "Use to disable write actions on filesystem"),
+	}
 	var provider = flag.String("provider", defaultProvider, "steam")
-	var outputPath = flag.String("output-path", defaultOutputPath, "The destination path of the screenshots")
-	var inputPath = flag.String("input-path", defaultInputPath, "Input path for the provider that requires it")
-	var downloadCovers = flag.Bool("download-covers", defaultDownloadCovers, "use to enable the download of covers (if the provider supports it)")
-	var dryRun = flag.Bool("dry-run", defaultDryRun, "Use to disable write actions on filesystem")
 
 	flag.Parse()
+
 	if helpers.SliceContainsString(allowedProviders[:], *provider, nil) {
-		games := getGamesFromProvider(*provider, *inputPath, *downloadCovers)
-		processGames(games, *outputPath, *dryRun, *downloadCovers)
+		games := getGamesFromProvider(*provider, cliOptions)
+		processGames(games, cliOptions)
 	} else {
 		log.Printf("Provider %s not found!", *provider)
 	}
 }
 
-func getGamesFromProvider(provider string, inputPath string, downloadCovers bool) []games.Game {
+func getGamesFromProvider(provider string, cliOptions games.CLIOptions) []games.Game {
 	var games []games.Game
 	switch provider {
 	case "steam":
-		games = append(games, steam.GetGames(downloadCovers)...)
+		games = append(games, steam.GetGames(cliOptions)...)
 	case "minecraft":
-		games = append(games, minecraft.GetGames()...)
+		games = append(games, minecraft.GetGames(cliOptions)...)
 	case "nintendo-switch":
-		games = append(games, nintendo_switch.GetGames(inputPath)...)
+		games = append(games, nintendo_switch.GetGames(cliOptions)...)
 	case "playstation-4":
-		games = append(games, playstation4.GetGames(inputPath)...)
+		games = append(games, playstation4.GetGames(cliOptions)...)
 	case "retroarch":
-		games = append(games, retroarch.GetGames(inputPath, downloadCovers)...)
+		games = append(games, retroarch.GetGames(cliOptions)...)
 	}
 	return games
 }
 
-func processGames(games []games.Game, outputPath string, dryRun bool, downloadCovers bool) {
+func processGames(games []games.Game, cliOptions games.CLIOptions) {
 	for _, game := range games {
-		destinationPath := filepath.Join(helpers.ExpandUser(outputPath), game.Platform)
+		destinationPath := filepath.Join(helpers.ExpandUser(*cliOptions.OutputPath), game.Platform)
 		if len(game.Name) > 0 {
 			destinationPath = filepath.Join(destinationPath, game.Name)
 		} else {
@@ -78,16 +79,16 @@ func processGames(games []games.Game, outputPath string, dryRun bool, downloadCo
 		}
 
 		// Check if folder exists
-		if _, err := os.Stat(destinationPath); os.IsNotExist(err) && !dryRun {
+		if _, err := os.Stat(destinationPath); os.IsNotExist(err) && !*cliOptions.DryRun {
 			mkdirErr := os.MkdirAll(destinationPath, 0711)
 			if mkdirErr != nil {
 				log.Printf("[ERROR] Couldn't create directory with name %s, falling back to %s", game.Name, slug.Make(game.Name))
-				destinationPath = filepath.Join(helpers.ExpandUser(outputPath), game.Platform, slug.Make(game.Name))
+				destinationPath = filepath.Join(helpers.ExpandUser(*cliOptions.OutputPath), game.Platform, slug.Make(game.Name))
 				os.MkdirAll(destinationPath, 0711)
 			}
 		}
 
-		if downloadCovers && !dryRun && game.Cover.Path != "" {
+		if *cliOptions.DownloadCovers && !*cliOptions.DryRun && game.Cover.Path != "" {
 			destinationCoverPath := filepath.Join(destinationPath, game.Cover.DestinationName)
 
 			if _, err := os.Stat(destinationCoverPath); os.IsNotExist(err) {
@@ -117,8 +118,8 @@ func processGames(games []games.Game, outputPath string, dryRun bool, downloadCo
 				}
 
 			} else {
-				if dryRun {
-					log.Println(filepath.Base(screenshot.Path), " -> ", strings.Replace(destinationPath, helpers.ExpandUser(outputPath), "", 1))
+				if *cliOptions.DryRun {
+					log.Println(filepath.Base(screenshot.Path), " -> ", strings.Replace(destinationPath, helpers.ExpandUser(*cliOptions.OutputPath), "", 1))
 				} else {
 					helpers.CopyFile(screenshot.Path, destinationPath)
 				}

@@ -156,7 +156,7 @@ func GetScreenshotsForGame(user string, game *games.Game) {
 	}
 }
 
-func GetGames(downloadCovers bool) []games.Game {
+func GetGames(cliOptions games.CLIOptions) []games.Game {
 	var localGames []games.Game
 	c := make(chan SteamAppList)
 	go getSteamAppList(c)
@@ -171,7 +171,7 @@ func GetGames(downloadCovers bool) []games.Game {
 			}
 			userGame := games.Game{ID: userGameID, Name: steamGame.Name, Provider: providerName, Platform: "PC"}
 
-			if downloadCovers {
+			if *cliOptions.DownloadCovers {
 				coverPath, err := downloadGameHeaderImage(userGameID)
 				if err == nil {
 					userGame.Cover = games.Screenshot{Path: coverPath, DestinationName: ".cover"}

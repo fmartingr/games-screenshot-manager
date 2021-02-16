@@ -33,10 +33,10 @@ func addScreenshotToGame(userGames []games.Game, gameName string, screenshot gam
 	return userGames
 }
 
-func GetGames(inputPath string) []games.Game {
+func GetGames(cliOptions games.CLIOptions) []games.Game {
 	var userGames []games.Game
 
-	err := filepath.Walk(inputPath,
+	err := filepath.Walk(*cliOptions.InputPath,
 		func(filePath string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err

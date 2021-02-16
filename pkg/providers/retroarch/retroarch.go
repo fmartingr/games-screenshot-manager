@@ -147,16 +147,16 @@ func findScreenshotsForGame(item RetroArchPlaylistItem) []games.Screenshot {
 	return result
 }
 
-func GetGames(inputPath string, downloadCovers bool) []games.Game {
+func GetGames(cliOptions games.CLIOptions) []games.Game {
 	var userGames []games.Game
 
-	playlists := readPlaylists(inputPath)
+	playlists := readPlaylists(*cliOptions.InputPath)
 
 	for playlistName := range playlists {
 		for _, item := range playlists[playlistName].Items {
 			var cover games.Screenshot
 
-			if downloadCovers {
+			if *cliOptions.DownloadCovers {
 				coverURL := formatLibretroBoxartURL(playlistName, item.Label)
 				boxartPath, err := helpers.DownloadURLIntoTempFile(coverURL)
 				if err == nil {
