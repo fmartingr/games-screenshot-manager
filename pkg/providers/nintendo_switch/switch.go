@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fmartingr/games-screenshot-mananger/pkg/games"
-	"github.com/fmartingr/games-screenshot-mananger/pkg/helpers"
+	"github.com/fmartingr/games-screenshot-manager/pkg/games"
+	"github.com/fmartingr/games-screenshot-manager/pkg/helpers"
 )
 
 const providerName = "nintendo-switch"

@@ -6,7 +6,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/fmartingr/games-screenshot-mananger/pkg/helpers"
+	"github.com/fmartingr/games-screenshot-manager/pkg/helpers"
 )
 
 const testfileContents = "testfile"

@@ -8,13 +8,13 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/fmartingr/games-screenshot-mananger/pkg/games"
-	"github.com/fmartingr/games-screenshot-mananger/pkg/helpers"
-	"github.com/fmartingr/games-screenshot-mananger/pkg/providers/minecraft"
-	"github.com/fmartingr/games-screenshot-mananger/pkg/providers/nintendo_switch"
-	"github.com/fmartingr/games-screenshot-mananger/pkg/providers/playstation4"
-	"github.com/fmartingr/games-screenshot-mananger/pkg/providers/retroarch"
-	"github.com/fmartingr/games-screenshot-mananger/pkg/providers/steam"
+	"github.com/fmartingr/games-screenshot-manager/pkg/games"
+	"github.com/fmartingr/games-screenshot-manager/pkg/helpers"
+	"github.com/fmartingr/games-screenshot-manager/pkg/providers/minecraft"
+	"github.com/fmartingr/games-screenshot-manager/pkg/providers/nintendo_switch"
+	"github.com/fmartingr/games-screenshot-manager/pkg/providers/playstation4"
+	"github.com/fmartingr/games-screenshot-manager/pkg/providers/retroarch"
+	"github.com/fmartingr/games-screenshot-manager/pkg/providers/steam"
 	"github.com/gosimple/slug"
 )
 

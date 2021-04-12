@@ -1,4 +1,4 @@
-module github.com/fmartingr/games-screenshot-mananger
+module github.com/fmartingr/games-screenshot-manager
 
 go 1.15
 

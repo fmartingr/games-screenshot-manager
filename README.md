@@ -47,7 +47,7 @@ games-screenshot-manager -provider steam -output-path ./Output
 games-screenshot-manager -provider steam -output-path ./Output -download-covers
 
 # Perform a dry run (see what's gonna get copied where)
-games-screenshot-mananger -provider steam -dry-run
+games-screenshot-manager -provider steam -dry-run
 
 # Parse all Nintendo Switch screenshots
 games-screenshot-manager -provider nintendo-switch -input-path ./Album

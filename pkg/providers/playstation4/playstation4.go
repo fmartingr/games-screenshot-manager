@@ -8,7 +8,7 @@ import (
 
 	"github.com/rwcarlsen/goexif/exif"
 
-	"github.com/fmartingr/games-screenshot-mananger/pkg/games"
+	"github.com/fmartingr/games-screenshot-manager/pkg/games"
 )
 
 const providerName = "playstation-4"
