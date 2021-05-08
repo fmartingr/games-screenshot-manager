@@ -3,6 +3,7 @@ package steam
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
@@ -11,13 +12,13 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/fmartingr/games-screenshot-manager/pkg/games"
 	"github.com/fmartingr/games-screenshot-manager/pkg/helpers"
+	"github.com/fmartingr/games-screenshot-manager/pkg/providers"
 )
 
 const providerName string = "steam"
 const gameListURL string = "https://api.steampowered.com/ISteamApps/GetAppList/v2/"
-const baseGameHeaderURL string = "https://cdn.cloudflare.steamstatic.com/steam/apps/{id}/header.jpg"
+const baseGameHeaderURL string = "https://cdn.cloudflare.steamstatic.com/steam/apps/%s/header.jpg"
 
 type SteamApp struct {
 	AppID uint64 `json:"appid"`
@@ -29,7 +30,7 @@ type SteamAppList struct {
 }
 
 func (appList SteamAppList) FindID(id string) (SteamApp, error) {
-	GameIDNotFound := errors.New("Game ID not found")
+	GameIDNotFound := errors.New("game ID not found")
 	for _, game := range appList.Apps {
 		uintGameID, err := strconv.ParseUint(id, 10, 64)
 		if err != nil {
@@ -83,13 +84,13 @@ func getSteamAppList(c chan SteamAppList) {
 		log.Fatal(jsonErr)
 	}
 
-	log.Printf("Updated Steam game list. Found %d games.", len(steamListResponse.AppList.Apps))
+	log.Printf("Updated Steam game list. Found %d apps.", len(steamListResponse.AppList.Apps))
 
 	c <- steamListResponse.AppList
 }
 
 func downloadGameHeaderImage(appId string) (string, error) {
-	url := "https://cdn.cloudflare.steamstatic.com/steam/apps/" + appId + "/header.jpg"
+	url := fmt.Sprintf(baseGameHeaderURL, appId)
 	coverURL, err := helpers.DownloadURLIntoTempFile(url)
 	if err != nil {
 		return "", err
@@ -137,7 +138,7 @@ func GetGamesFromUser(user string) []string {
 	return userGames
 }
 
-func GetScreenshotsForGame(user string, game *games.Game) {
+func GetScreenshotsForGame(user string, game *providers.Game) {
 	path := filepath.Join(getBasePathForOS(), "userdata", user, "/760/remote/", game.ID, "screenshots")
 	files, err := ioutil.ReadDir(path)
 	if err != nil {
@@ -146,7 +147,7 @@ func GetScreenshotsForGame(user string, game *games.Game) {
 
 	for _, file := range files {
 		if strings.Contains(file.Name(), ".jpg") {
-			game.Screenshots = append(game.Screenshots, games.Screenshot{Path: path + "/" + file.Name()})
+			game.Screenshots = append(game.Screenshots, providers.Screenshot{Path: path + "/" + file.Name()})
 			// log.Printf("Found screenshot for user %s and game %d: %s", user, game.ID, path+"/"+file.Name())
 		}
 	}
@@ -156,8 +157,8 @@ func GetScreenshotsForGame(user string, game *games.Game) {
 	}
 }
 
-func GetGames(cliOptions games.CLIOptions) []games.Game {
-	var localGames []games.Game
+func GetGames(cliOptions providers.ProviderOptions) []providers.Game {
+	var localGames []providers.Game
 	c := make(chan SteamAppList)
 	go getSteamAppList(c)
 	users := GuessUsers()
@@ -169,12 +170,12 @@ func GetGames(cliOptions games.CLIOptions) []games.Game {
 			if err != nil {
 				log.Print("[ERROR] Steam game ID not found: ", userGameID)
 			}
-			userGame := games.Game{ID: userGameID, Name: steamGame.Name, Provider: providerName, Platform: "PC"}
+			userGame := providers.Game{ID: userGameID, Name: steamGame.Name, Provider: providerName, Platform: "PC"}
 
 			if *cliOptions.DownloadCovers {
 				coverPath, err := downloadGameHeaderImage(userGameID)
 				if err == nil {
-					userGame.Cover = games.Screenshot{Path: coverPath, DestinationName: ".cover"}
+					userGame.Cover = providers.Screenshot{Path: coverPath, DestinationName: ".cover"}
 				}
 			}
 

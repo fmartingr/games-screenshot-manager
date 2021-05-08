@@ -23,8 +23,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fmartingr/games-screenshot-manager/pkg/games"
 	"github.com/fmartingr/games-screenshot-manager/pkg/helpers"
+	"github.com/fmartingr/games-screenshot-manager/pkg/providers"
 )
 
 const providerName = "retroarch"
@@ -106,8 +106,8 @@ func readPlaylists(playlistsPath string) map[string]RetroArchPlaylist {
 	return result
 }
 
-func findScreenshotsForGame(item RetroArchPlaylistItem) []games.Screenshot {
-	var result []games.Screenshot
+func findScreenshotsForGame(item RetroArchPlaylistItem) []providers.Screenshot {
+	var result []providers.Screenshot
 	filePath := filepath.Dir(item.Path)
 	fileName := strings.Replace(filepath.Base(item.Path), filepath.Ext(item.Path), "", 1)
 	files, err := ioutil.ReadDir(filePath)
@@ -130,43 +130,43 @@ func findScreenshotsForGame(item RetroArchPlaylistItem) []games.Screenshot {
 			if strings.Contains(file.Name(), "-cheevo-") {
 				filenameParts := strings.Split(file.Name(), "-")
 				achievementID := strings.Replace(filenameParts[len(filenameParts)-1], extension, "", 1)
-				screenshotDestinationName = file.ModTime().Format(games.DatetimeFormat) + "_retroachievement-" + achievementID + extension
+				screenshotDestinationName = file.ModTime().Format(providers.DatetimeFormat) + "_retroachievement-" + achievementID + extension
 			} else {
 				screenshotDate, err := time.Parse(datetimeLayout, file.Name()[len(file.Name())-len(extension)-len(datetimeLayout):len(file.Name())-len(extension)])
 				if err == nil {
-					screenshotDestinationName = screenshotDate.Format(games.DatetimeFormat) + extension
+					screenshotDestinationName = screenshotDate.Format(providers.DatetimeFormat) + extension
 				} else {
 					log.Printf("[error] Formatting screenshot %s: %s", file.Name(), err)
 					continue
 				}
 			}
 
-			result = append(result, games.Screenshot{Path: filepath.Join(filePath, file.Name()), DestinationName: screenshotDestinationName})
+			result = append(result, providers.Screenshot{Path: filepath.Join(filePath, file.Name()), DestinationName: screenshotDestinationName})
 		}
 	}
 	return result
 }
 
-func GetGames(cliOptions games.CLIOptions) []games.Game {
-	var userGames []games.Game
+func GetGames(cliOptions providers.ProviderOptions) []providers.Game {
+	var userGames []providers.Game
 
 	playlists := readPlaylists(*cliOptions.InputPath)
 
 	for playlistName := range playlists {
 		for _, item := range playlists[playlistName].Items {
-			var cover games.Screenshot
+			var cover providers.Screenshot
 
 			if *cliOptions.DownloadCovers {
 				coverURL := formatLibretroBoxartURL(playlistName, item.Label)
 				boxartPath, err := helpers.DownloadURLIntoTempFile(coverURL)
 				if err == nil {
-					cover = games.Screenshot{Path: boxartPath, DestinationName: ".cover"}
+					cover = providers.Screenshot{Path: boxartPath, DestinationName: ".cover"}
 				} else {
 					log.Printf("[error] Error downloading cover for %s: %s", item.Label, err)
 				}
 			}
 
-			userGames = append(userGames, games.Game{
+			userGames = append(userGames, providers.Game{
 				Platform:    cleanPlatformName(playlistName),
 				Name:        cleanGameName(item.Label),
 				Provider:    providerName,

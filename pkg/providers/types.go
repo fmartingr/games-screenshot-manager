@@ -1,4 +1,4 @@
-package games
+package providers
 
 import (
 	"log"
@@ -8,7 +8,7 @@ import (
 
 const DatetimeFormat = "2006-01-02_15-04-05"
 
-type CLIOptions struct {
+type ProviderOptions struct {
 	OutputPath     *string
 	InputPath      *string
 	DownloadCovers *bool

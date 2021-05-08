@@ -8,11 +8,11 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/fmartingr/games-screenshot-manager/pkg/games"
 	"github.com/fmartingr/games-screenshot-manager/pkg/helpers"
+	"github.com/fmartingr/games-screenshot-manager/pkg/providers"
 )
 
-func getScreenshotsFromPath(game *games.Game, path string) {
+func getScreenshotsFromPath(game *providers.Game, path string) {
 	path = helpers.ExpandUser(path)
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		files, err := ioutil.ReadDir(path)
@@ -22,22 +22,22 @@ func getScreenshotsFromPath(game *games.Game, path string) {
 
 		for _, file := range files {
 			if strings.Contains(file.Name(), ".png") {
-				game.Screenshots = append(game.Screenshots, games.Screenshot{Path: path + "/" + file.Name(), DestinationName: file.Name()})
+				game.Screenshots = append(game.Screenshots, providers.Screenshot{Path: path + "/" + file.Name(), DestinationName: file.Name()})
 			}
 		}
 	}
 }
 
-func GetGames(cliOptions games.CLIOptions) []games.Game {
-	var result []games.Game
+func GetGames(cliOptions providers.ProviderOptions) []providers.Game {
+	var result []providers.Game
 	// Standalone minecraft
-	minecraftStandalone := games.Game{Name: "Minecraft", Platform: "PC", Notes: "Standalone"}
+	minecraftStandalone := providers.Game{Name: "Minecraft", Platform: "PC", Notes: "Standalone"}
 
 	if runtime.GOOS == "linux" {
 		getScreenshotsFromPath(&minecraftStandalone, "~/.minecraft/screenshots")
 
 		// Flatpak minecraft
-		minecraftFlatpak := games.Game{Name: "Minecraft", Platform: "PC", Notes: "Flatpak"}
+		minecraftFlatpak := providers.Game{Name: "Minecraft", Platform: "PC", Notes: "Flatpak"}
 		for _, path := range [2]string{"~/.var/app/com.mojang.Minecraft/.minecraft/screenshots", "~/.var/app/com.mojang.Minecraft/data/minecraft/screenshots"} {
 			getScreenshotsFromPath(&minecraftFlatpak, path)
 		}

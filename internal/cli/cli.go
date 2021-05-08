@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/fmartingr/games-screenshot-manager/pkg/games"
 	"github.com/fmartingr/games-screenshot-manager/pkg/helpers"
+	"github.com/fmartingr/games-screenshot-manager/pkg/providers"
 	"github.com/fmartingr/games-screenshot-manager/pkg/providers/minecraft"
 	"github.com/fmartingr/games-screenshot-manager/pkg/providers/nintendo_switch"
 	"github.com/fmartingr/games-screenshot-manager/pkg/providers/playstation4"
@@ -28,7 +28,7 @@ const defaultDryRun bool = false
 const defaultDownloadCovers bool = false
 
 func Start() {
-	cliOptions := games.CLIOptions{
+	cliOptions := providers.ProviderOptions{
 		OutputPath:     flag.String("output-path", defaultOutputPath, "The destination path of the screenshots"),
 		InputPath:      flag.String("input-path", defaultInputPath, "Input path for the provider that requires it"),
 		DownloadCovers: flag.Bool("download-covers", defaultDownloadCovers, "use to enable the download of covers (if the provider supports it)"),
@@ -46,8 +46,8 @@ func Start() {
 	}
 }
 
-func getGamesFromProvider(provider string, cliOptions games.CLIOptions) []games.Game {
-	var games []games.Game
+func getGamesFromProvider(provider string, cliOptions providers.ProviderOptions) []providers.Game {
+	var games []providers.Game
 	switch provider {
 	case "steam":
 		games = append(games, steam.GetGames(cliOptions)...)
@@ -63,7 +63,7 @@ func getGamesFromProvider(provider string, cliOptions games.CLIOptions) []games.
 	return games
 }
 
-func processGames(games []games.Game, cliOptions games.CLIOptions) {
+func processGames(games []providers.Game, cliOptions providers.ProviderOptions) {
 	for _, game := range games {
 		destinationPath := filepath.Join(helpers.ExpandUser(*cliOptions.OutputPath), game.Platform)
 		if len(game.Name) > 0 {
@@ -112,7 +112,7 @@ func processGames(games []games.Game, cliOptions games.CLIOptions) {
 					continue
 				}
 
-				if bytes.Compare(sourceMd5, destinationMd5) != 0 {
+				if !bytes.Equal(sourceMd5, destinationMd5) {
 					// Images are not equal, we should copy it anyway, but how?
 					log.Println("Found different screenshot with equal timestamp for game ", game.Name, screenshot.Path)
 				}

@@ -6,16 +6,15 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/fmartingr/games-screenshot-manager/pkg/providers"
 	"github.com/rwcarlsen/goexif/exif"
-
-	"github.com/fmartingr/games-screenshot-manager/pkg/games"
 )
 
 const providerName = "playstation-4"
 const platformName = "PlayStation 4"
 
-func addScreenshotToGame(userGames []games.Game, gameName string, screenshot games.Screenshot) []games.Game {
-	var foundGame games.Game
+func addScreenshotToGame(userGames []providers.Game, gameName string, screenshot providers.Screenshot) []providers.Game {
+	var foundGame providers.Game
 	for gameIndex, game := range userGames {
 		if game.Name == gameName {
 			foundGame = game
@@ -25,7 +24,7 @@ func addScreenshotToGame(userGames []games.Game, gameName string, screenshot gam
 
 	// Game not found
 	if foundGame.Name == "" {
-		foundGame := games.Game{Name: gameName, ID: gameName, Platform: platformName, Provider: providerName}
+		foundGame := providers.Game{Name: gameName, ID: gameName, Platform: platformName, Provider: providerName}
 		foundGame.Screenshots = append(foundGame.Screenshots, screenshot)
 		userGames = append(userGames, foundGame)
 	}
@@ -33,8 +32,8 @@ func addScreenshotToGame(userGames []games.Game, gameName string, screenshot gam
 	return userGames
 }
 
-func GetGames(cliOptions games.CLIOptions) []games.Game {
-	var userGames []games.Game
+func GetGames(cliOptions providers.ProviderOptions) []providers.Game {
+	var userGames []providers.Game
 
 	err := filepath.Walk(*cliOptions.InputPath,
 		func(filePath string, info os.FileInfo, err error) error {
@@ -63,14 +62,14 @@ func GetGames(cliOptions games.CLIOptions) []games.Game {
 					defer fileDescriptor.Close()
 
 					exifDateTime, _ := exifData.DateTime()
-					destinationName = exifDateTime.Format(games.DatetimeFormat)
+					destinationName = exifDateTime.Format(providers.DatetimeFormat)
 
 				} else if extension == ".mp4" {
 					if len(fileName) >= len(layout)+len(extension) {
 						videoDatetime, err := time.Parse(layout, fileName[len(fileName)-len(extension)-len(layout):len(fileName)-len(extension)])
 
 						if err == nil {
-							destinationName = videoDatetime.Format(games.DatetimeFormat)
+							destinationName = videoDatetime.Format(providers.DatetimeFormat)
 						} else {
 							log.Printf("[Warning] File does not follow datetime convention: %s. (%s) skipping...", fileName, err)
 							return nil
@@ -81,7 +80,7 @@ func GetGames(cliOptions games.CLIOptions) []games.Game {
 					}
 				}
 
-				screenshot := games.Screenshot{Path: filePath, DestinationName: destinationName + extension}
+				screenshot := providers.Screenshot{Path: filePath, DestinationName: destinationName + extension}
 				userGames = addScreenshotToGame(userGames, gameName, screenshot)
 
 			}

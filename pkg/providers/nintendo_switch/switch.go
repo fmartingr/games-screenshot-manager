@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fmartingr/games-screenshot-manager/pkg/games"
 	"github.com/fmartingr/games-screenshot-manager/pkg/helpers"
+	"github.com/fmartingr/games-screenshot-manager/pkg/providers"
 )
 
 const providerName = "nintendo-switch"
@@ -25,7 +25,7 @@ type SwitchGame struct {
 func findGameByEncryptedID(gameList []SwitchGame, encryptedGameID string) SwitchGame {
 	var gameFound SwitchGame = SwitchGame{EncryptedGameID: encryptedGameID}
 	for _, game := range gameList {
-		if strings.ToUpper(game.EncryptedGameID) == strings.ToUpper(encryptedGameID) {
+		if strings.EqualFold(game.EncryptedGameID, encryptedGameID) {
 			gameFound = game
 		}
 	}
@@ -54,13 +54,13 @@ func getSwitchGameList() []SwitchGame {
 		log.Fatal(jsonErr)
 	}
 
-	log.Printf("Updated Nintendo Switch game list. Found %d games.", len(switchGameList))
+	log.Printf("Updated Nintendo Switch game list. Found %d providers.", len(switchGameList))
 
 	return switchGameList
 }
 
-func addScreenshotToGame(userGames []games.Game, switchGame SwitchGame, screenshot games.Screenshot) []games.Game {
-	var foundGame games.Game
+func addScreenshotToGame(userGames []providers.Game, switchGame SwitchGame, screenshot providers.Screenshot) []providers.Game {
+	var foundGame providers.Game
 	for gameIndex, game := range userGames {
 		if game.ID == switchGame.EncryptedGameID {
 			foundGame = game
@@ -69,7 +69,7 @@ func addScreenshotToGame(userGames []games.Game, switchGame SwitchGame, screensh
 	}
 
 	if foundGame.ID == "" {
-		foundGame := games.Game{Name: switchGame.Name, ID: switchGame.EncryptedGameID, Platform: platformName, Provider: providerName}
+		foundGame := providers.Game{Name: switchGame.Name, ID: switchGame.EncryptedGameID, Platform: platformName, Provider: providerName}
 		foundGame.Screenshots = append(foundGame.Screenshots, screenshot)
 		userGames = append(userGames, foundGame)
 	}
@@ -77,9 +77,9 @@ func addScreenshotToGame(userGames []games.Game, switchGame SwitchGame, screensh
 	return userGames
 }
 
-func GetGames(cliOptions games.CLIOptions) []games.Game {
+func GetGames(cliOptions providers.ProviderOptions) []providers.Game {
 	switchGames := getSwitchGameList()
-	var userGames []games.Game
+	var userGames []providers.Game
 
 	err := filepath.Walk(*cliOptions.InputPath,
 		func(path string, info os.FileInfo, err error) error {
@@ -100,7 +100,7 @@ func GetGames(cliOptions games.CLIOptions) []games.Game {
 					log.Panic("Could not parse filename: ", err)
 				}
 
-				screenshot := games.Screenshot{Path: path, DestinationName: destinationName.Format(games.DatetimeFormat) + extension}
+				screenshot := providers.Screenshot{Path: path, DestinationName: destinationName.Format(providers.DatetimeFormat) + extension}
 				userGames = addScreenshotToGame(userGames, switchGame, screenshot)
 			}
 			return nil
