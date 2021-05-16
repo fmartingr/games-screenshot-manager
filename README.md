@@ -1,18 +1,20 @@
 # Games Screenshot Manager
 
+[![Go Report Card](https://goreportcard.com/badge/github.com/fmartingr/games-screenshot-manager)](https://goreportcard.com/report/github.com/fmartingr/games-screenshot-manager)
+
 A simple tool to collect and sort games screenshots from different platforms.
 
 ## Supported providers
 
 Use the appropriate ID with the `-provider` flag. [See examples below](#Usage)
 
-| Name | ID | Linux | Windows | macOS | Covers | Notes |
-| ---- | -- | ----- | ------- | ----- | ------ | ----- |
-| Steam | `steam` | Yes | Yes | Yes | Yes | 
-| Minecraft | `minecraft` | Yes | Yes | Yes | No |
-| Nintendo Switch | `nintendo-switch` | - | - | - | No | Requires `-input-path` pointing to ALBUM folder
-| PlayStation 4 | `playstation-4` | - | - | - | No | Requires `-input-path` pointing to PS4 folder
-| RetroArch | `retroarch` | - | - | - | Yes | Requires `-input-path` pointing to Playlists folder
+| Name            | ID                | Linux | Windows | macOS | Covers | Notes                                               |
+| --------------- | ----------------- | ----- | ------- | ----- | ------ | --------------------------------------------------- |
+| Steam           | `steam`           | Yes   | Yes     | Yes   | Yes    |
+| Minecraft       | `minecraft`       | Yes   | Yes     | Yes   | No     |
+| Nintendo Switch | `nintendo-switch` | -     | -       | -     | No     | Requires `-input-path` pointing to ALBUM folder     |
+| PlayStation 4   | `playstation-4`   | -     | -       | -     | No     | Requires `-input-path` pointing to PS4 folder       |
+| RetroArch       | `retroarch`       | -     | -       | -     | Yes    | Requires `-input-path` pointing to Playlists folder |
 
 ## How it works
 
@@ -30,9 +32,7 @@ Optionally a cover image for a game can be downloaded and placed under a `.cover
 go get -u github.com/fmartingr/games-screenshot-manager
 ```
 
-<!--
-Or get a binary build from the [releases page](https://github.com/fmartingr/games-screenshot-manager/releases)
--->
+Or get the latest binary build from the [releases page](https://github.com/fmartingr/games-screenshot-manager/releases)
 
 ## Usage
 
