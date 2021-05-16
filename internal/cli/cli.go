@@ -63,6 +63,7 @@ func getGamesFromProvider(provider string, cliOptions providers.ProviderOptions)
 	return games
 }
 
+// TODO: Reduce into smaller functions
 func processGames(games []providers.Game, cliOptions providers.ProviderOptions) {
 	for _, game := range games {
 		destinationPath := filepath.Join(helpers.ExpandUser(*cliOptions.OutputPath), game.Platform)
@@ -96,7 +97,7 @@ func processGames(games []providers.Game, cliOptions providers.ProviderOptions) 
 			}
 		}
 
-		log.Printf("=> Proceesing screenshots for %s %s", game.Name, game.Notes)
+		log.Printf("=> Processing screenshots for %s %s", game.Name, game.Notes)
 		for _, screenshot := range game.Screenshots {
 			destinationPath := filepath.Join(destinationPath, screenshot.GetDestinationName())
 
