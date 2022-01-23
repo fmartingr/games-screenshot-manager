@@ -54,7 +54,7 @@ func getSwitchGameList() []SwitchGame {
 		log.Fatal(jsonErr)
 	}
 
-	log.Printf("Updated Nintendo Switch game list. Found %d providers.", len(switchGameList))
+	log.Printf("Updated Nintendo Switch game list. Found %d games.", len(switchGameList))
 
 	return switchGameList
 }
