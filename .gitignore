@@ -2,3 +2,5 @@ Output
 Album
 build
 dist/
+.DS_Store
+Output*

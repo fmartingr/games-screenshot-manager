@@ -1,4 +1,4 @@
-package providers
+package models
 
 import (
 	"log"
@@ -8,13 +8,6 @@ import (
 
 const DatetimeFormat = "2006-01-02_15-04-05"
 
-type ProviderOptions struct {
-	OutputPath     *string
-	InputPath      *string
-	DownloadCovers *bool
-	DryRun         *bool
-}
-
 type Game struct {
 	ID          string
 	Name        string
@@ -22,7 +15,16 @@ type Game struct {
 	Provider    string
 	Screenshots []Screenshot
 	Notes       string
-	Cover       Screenshot
+	CoverURL    string
+}
+
+func NewGame(id, name, platform, provider string) Game {
+	return Game{
+		ID:       id,
+		Name:     name,
+		Platform: platform,
+		Provider: provider,
+	}
 }
 
 type Screenshot struct {
@@ -39,4 +41,17 @@ func (screenshot Screenshot) GetDestinationName() string {
 		log.Fatal(statErr)
 	}
 	return fileStat.ModTime().Format(DatetimeFormat) + filepath.Ext(screenshot.Path)
+}
+
+func NewScreenshot(path, destinationName string) Screenshot {
+	return Screenshot{
+		Path:            path,
+		DestinationName: destinationName,
+	}
+}
+
+func NewScreenshotWithoutDestination(path string) Screenshot {
+	return Screenshot{
+		Path: path,
+	}
 }
