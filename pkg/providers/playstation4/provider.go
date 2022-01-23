@@ -6,36 +6,19 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/fmartingr/games-screenshot-manager/pkg/providers"
+	"github.com/fmartingr/games-screenshot-manager/internal/models"
 	"github.com/rwcarlsen/goexif/exif"
 )
 
-const providerName = "playstation-4"
+const Name = "playstation-4"
 const platformName = "PlayStation 4"
 
-func addScreenshotToGame(userGames []providers.Game, gameName string, screenshot providers.Screenshot) []providers.Game {
-	var foundGame providers.Game
-	for gameIndex, game := range userGames {
-		if game.Name == gameName {
-			foundGame = game
-			userGames[gameIndex].Screenshots = append(userGames[gameIndex].Screenshots, screenshot)
-		}
-	}
+type Playstation4Provider struct{}
 
-	// Game not found
-	if foundGame.Name == "" {
-		foundGame := providers.Game{Name: gameName, ID: gameName, Platform: platformName, Provider: providerName}
-		foundGame.Screenshots = append(foundGame.Screenshots, screenshot)
-		userGames = append(userGames, foundGame)
-	}
+func (p *Playstation4Provider) FindGames(options models.ProviderOptions) ([]*models.Game, error) {
+	var userGames []*models.Game
 
-	return userGames
-}
-
-func GetGames(cliOptions providers.ProviderOptions) []providers.Game {
-	var userGames []providers.Game
-
-	err := filepath.Walk(*cliOptions.InputPath,
+	err := filepath.Walk(options.InputPath,
 		func(filePath string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
@@ -62,14 +45,14 @@ func GetGames(cliOptions providers.ProviderOptions) []providers.Game {
 					defer fileDescriptor.Close()
 
 					exifDateTime, _ := exifData.DateTime()
-					destinationName = exifDateTime.Format(providers.DatetimeFormat)
+					destinationName = exifDateTime.Format(models.DatetimeFormat)
 
 				} else if extension == ".mp4" {
 					if len(fileName) >= len(layout)+len(extension) {
 						videoDatetime, err := time.Parse(layout, fileName[len(fileName)-len(extension)-len(layout):len(fileName)-len(extension)])
 
 						if err == nil {
-							destinationName = videoDatetime.Format(providers.DatetimeFormat)
+							destinationName = videoDatetime.Format(models.DatetimeFormat)
 						} else {
 							log.Printf("[Warning] File does not follow datetime convention: %s. (%s) skipping...", fileName, err)
 							return nil
@@ -80,9 +63,8 @@ func GetGames(cliOptions providers.ProviderOptions) []providers.Game {
 					}
 				}
 
-				screenshot := providers.Screenshot{Path: filePath, DestinationName: destinationName + extension}
-				userGames = addScreenshotToGame(userGames, gameName, screenshot)
-
+				screenshot := models.Screenshot{Path: filePath, DestinationName: destinationName + extension}
+				addScreenshotToGame(userGames, gameName, screenshot)
 			}
 
 			return nil
@@ -90,5 +72,9 @@ func GetGames(cliOptions providers.ProviderOptions) []providers.Game {
 	if err != nil {
 		log.Panic(err)
 	}
-	return userGames
+	return userGames, nil
+}
+
+func NewPlaystation4Provider() *Playstation4Provider {
+	return &Playstation4Provider{}
 }

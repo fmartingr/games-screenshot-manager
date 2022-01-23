@@ -1,15 +1,3 @@
-// RetroArch screenshot provider
-
-// Notes:
-// This provider only works if the following retroarch configuration is set:
-// screenshots_in_content_dir = "true"
-// auto_screenshot_filename = "true"
-// This way the screenshots will be stored in the same folders as the games
-// We will read the playlists from retroarch to determine the Platforms and games
-// from there, and screenshots will be extracted from the content folders, so you can
-// sort your games the way you like most, but screenshots need to be renamed
-// by retroarch for us to parse them properly.
-
 package retroarch
 
 import (
@@ -23,16 +11,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fmartingr/games-screenshot-manager/internal/models"
 	"github.com/fmartingr/games-screenshot-manager/pkg/helpers"
-	"github.com/fmartingr/games-screenshot-manager/pkg/providers"
 )
 
-const providerName = "retroarch"
-
-const libretroCoverURLBase = "http://thumbnails.libretro.com/"
-const datetimeLayout = "060102-150405"
-
-type RetroArchPlaylistItem struct {
+type retroArchPlaylistItem struct {
 	Path     string `json:"path"`
 	Label    string `json:"label"`
 	CorePath string `json:"core_path"`
@@ -41,7 +24,7 @@ type RetroArchPlaylistItem struct {
 	DBName   string `json:"db_name"`
 }
 
-type RetroArchPlaylist struct {
+type retroArchPlaylist struct {
 	Version            string                  `json:"version"`
 	DefaultCorePath    string                  `json:"default_core_path"`
 	DefaultCoreName    string                  `json:"default_core_name"`
@@ -49,7 +32,7 @@ type RetroArchPlaylist struct {
 	RightThumbnailMode int                     `json:"right_thumbnail_mode"`
 	LeftThumbnailMode  int                     `json:"left_thumbnail_mode"`
 	SortMode           int                     `json:"sort_mode"`
-	Items              []RetroArchPlaylistItem `json:"items"`
+	Items              []retroArchPlaylistItem `json:"items"`
 }
 
 func formatLibretroBoxartURL(platform string, game string) string {
@@ -70,8 +53,8 @@ func cleanGameName(gameName string) string {
 	return splits[0]
 }
 
-func readPlaylists(playlistsPath string) map[string]RetroArchPlaylist {
-	var result = make(map[string]RetroArchPlaylist)
+func readPlaylists(playlistsPath string) map[string]retroArchPlaylist {
+	var result = make(map[string]retroArchPlaylist)
 	playlistsPath = helpers.ExpandUser(playlistsPath)
 	if _, err := os.Stat(playlistsPath); !os.IsNotExist(err) {
 		files, err := ioutil.ReadDir(playlistsPath)
@@ -81,7 +64,7 @@ func readPlaylists(playlistsPath string) map[string]RetroArchPlaylist {
 
 		for _, file := range files {
 			if strings.Contains(file.Name(), ".lpl") {
-				var item RetroArchPlaylist
+				var item retroArchPlaylist
 				source, errOpen := os.Open(filepath.Join(playlistsPath, file.Name()))
 				if errOpen != nil {
 					log.Printf("[ERROR] Error reading playlist %s: %s", file.Name(), errOpen)
@@ -106,8 +89,8 @@ func readPlaylists(playlistsPath string) map[string]RetroArchPlaylist {
 	return result
 }
 
-func findScreenshotsForGame(item RetroArchPlaylistItem) []providers.Screenshot {
-	var result []providers.Screenshot
+func findScreenshotsForGame(item retroArchPlaylistItem) []models.Screenshot {
+	var result []models.Screenshot
 	filePath := filepath.Dir(item.Path)
 	fileName := strings.Replace(filepath.Base(item.Path), filepath.Ext(item.Path), "", 1)
 	files, err := ioutil.ReadDir(filePath)
@@ -130,51 +113,19 @@ func findScreenshotsForGame(item RetroArchPlaylistItem) []providers.Screenshot {
 			if strings.Contains(file.Name(), "-cheevo-") {
 				filenameParts := strings.Split(file.Name(), "-")
 				achievementID := strings.Replace(filenameParts[len(filenameParts)-1], extension, "", 1)
-				screenshotDestinationName = file.ModTime().Format(providers.DatetimeFormat) + "_retroachievement-" + achievementID + extension
+				screenshotDestinationName = file.ModTime().Format(models.DatetimeFormat) + "_retroachievement-" + achievementID + extension
 			} else {
 				screenshotDate, err := time.Parse(datetimeLayout, file.Name()[len(file.Name())-len(extension)-len(datetimeLayout):len(file.Name())-len(extension)])
 				if err == nil {
-					screenshotDestinationName = screenshotDate.Format(providers.DatetimeFormat) + extension
+					screenshotDestinationName = screenshotDate.Format(models.DatetimeFormat) + extension
 				} else {
 					log.Printf("[error] Formatting screenshot %s: %s", file.Name(), err)
 					continue
 				}
 			}
 
-			result = append(result, providers.Screenshot{Path: filepath.Join(filePath, file.Name()), DestinationName: screenshotDestinationName})
+			result = append(result, models.Screenshot{Path: filepath.Join(filePath, file.Name()), DestinationName: screenshotDestinationName})
 		}
 	}
 	return result
-}
-
-func GetGames(cliOptions providers.ProviderOptions) []providers.Game {
-	var userGames []providers.Game
-
-	playlists := readPlaylists(*cliOptions.InputPath)
-
-	for playlistName := range playlists {
-		for _, item := range playlists[playlistName].Items {
-			var cover providers.Screenshot
-
-			if *cliOptions.DownloadCovers {
-				coverURL := formatLibretroBoxartURL(playlistName, item.Label)
-				boxartPath, err := helpers.DownloadURLIntoTempFile(coverURL)
-				if err == nil {
-					cover = providers.Screenshot{Path: boxartPath, DestinationName: ".cover"}
-				} else {
-					log.Printf("[error] Error downloading cover for %s: %s", item.Label, err)
-				}
-			}
-
-			userGames = append(userGames, providers.Game{
-				Platform:    cleanPlatformName(playlistName),
-				Name:        cleanGameName(item.Label),
-				Provider:    providerName,
-				Screenshots: findScreenshotsForGame(item),
-				Cover:       cover,
-			})
-		}
-	}
-
-	return userGames
 }
