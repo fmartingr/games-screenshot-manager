@@ -61,7 +61,7 @@ func addScreenshotToGame(userGames []*models.Game, switchGame SwitchGame, screen
 		}
 	}
 
-	if foundGame.ID == "" {
+	if foundGame == nil {
 		foundGame := models.Game{Name: switchGame.Name, ID: switchGame.EncryptedGameID, Platform: platformName, Provider: platformName}
 		foundGame.Screenshots = append(foundGame.Screenshots, screenshot)
 		userGames = append(userGames, &foundGame)
