@@ -15,27 +15,30 @@ import (
 )
 
 type Processor struct {
-	input   chan *models.Game
+	games   chan *models.Game
 	options models.Options
-	wg      sync.WaitGroup
+	wg      *sync.WaitGroup
 }
 
 func (p *Processor) Start(ctx context.Context) {
-	go p.process(ctx)
+	for i := 0; i < p.options.WorkersNum; i++ {
+		go p.process(ctx)
+	}
 }
 
 func (p *Processor) Process(game *models.Game) {
-	p.input <- game
+	p.wg.Add(1)
+	p.games <- game
 }
 
 func (p *Processor) process(ctx context.Context) {
+	log.Println("Started worker process")
 	for {
 		select {
 		case <-ctx.Done():
 			return
 
-		case game := <-p.input:
-			p.wg.Add(1)
+		case game := <-p.games:
 			if err := p.processGame(game); err != nil {
 				log.Printf("[err] %s", err)
 			}
@@ -47,17 +50,11 @@ func (p *Processor) Wait() {
 	p.wg.Wait()
 }
 
-func NewProcessor(options models.Options) *Processor {
-	return &Processor{
-		input:   make(chan *models.Game, options.ProcessBufferSize),
-		options: options,
-		wg:      sync.WaitGroup{},
-	}
-}
-
 // TODO: Reduce into smaller functions
 func (p *Processor) processGame(game *models.Game) (err error) {
 	defer p.wg.Done()
+
+	log.Printf("Processing game: %s", game.Name)
 
 	// Do not continue if there's no screenshots
 	if len(game.Screenshots) == 0 {
@@ -118,10 +115,20 @@ func (p *Processor) processGame(game *models.Game) (err error) {
 			if p.options.DryRun {
 				log.Println(filepath.Base(screenshot.Path), " -> ", strings.Replace(destinationPath, helpers.ExpandUser(p.options.OutputPath), "", 1))
 			} else {
-				helpers.CopyFile(screenshot.Path, destinationPath)
+				if _, err := helpers.CopyFile(screenshot.Path, destinationPath); err != nil {
+					log.Printf("[error] error during operation: %s", err)
+				}
 			}
 		}
 	}
 
 	return nil
+}
+
+func NewProcessor(options models.Options) *Processor {
+	return &Processor{
+		games:   make(chan *models.Game, options.ProcessBufferSize),
+		options: options,
+		wg:      &sync.WaitGroup{},
+	}
 }
