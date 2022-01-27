@@ -3,7 +3,6 @@ package cli
 import (
 	"context"
 	"flag"
-	"log"
 	"os"
 
 	"github.com/fmartingr/games-screenshot-manager/internal/models"
@@ -14,6 +13,7 @@ import (
 	"github.com/fmartingr/games-screenshot-manager/pkg/providers/retroarch"
 	"github.com/fmartingr/games-screenshot-manager/pkg/providers/steam"
 	"github.com/fmartingr/games-screenshot-manager/pkg/registry"
+	"github.com/sirupsen/logrus"
 )
 
 const defaultOutputPath string = "./Output"
@@ -24,14 +24,15 @@ const defaultDryRun bool = false
 const defaultDownloadCovers bool = false
 
 func Start() {
-	registry := registry.NewProviderRegistry()
-	registry.Register(minecraft.Name, minecraft.NewMinecraftProvider())
-	registry.Register(nintendo_switch.Name, nintendo_switch.NewNintendoSwitchProvider())
-	registry.Register(playstation4.Name, playstation4.NewPlaystation4Provider())
-	registry.Register(steam.Name, steam.NewSteamProvider())
-	registry.Register(retroarch.Name, retroarch.NewRetroArchProvider())
-
+	logger := logrus.New()
 	flagSet := flag.NewFlagSet("gsm", flag.ExitOnError)
+
+	registry := registry.NewProviderRegistry(logger)
+	registry.Register(minecraft.Name, minecraft.NewMinecraftProvider)
+	registry.Register(nintendo_switch.Name, nintendo_switch.NewNintendoSwitchProvider)
+	registry.Register(playstation4.Name, playstation4.NewPlaystation4Provider)
+	registry.Register(steam.Name, steam.NewSteamProvider)
+	registry.Register(retroarch.Name, retroarch.NewRetroArchProvider)
 
 	options := models.Options{
 		ProcessBufferSize: 32,
@@ -46,22 +47,33 @@ func Start() {
 	providerOptions := models.ProviderOptions{}
 	flagSet.StringVar(&providerOptions.InputPath, "input-path", defaultInputPath, "Input path for the provider that requires it")
 
-	flagSet.Parse(os.Args[1:])
+	loglevelFlag := flagSet.String("log-level", logrus.InfoLevel.String(), "Log level")
+
+	if err := flagSet.Parse(os.Args[1:]); err != nil {
+		logger.Errorf("error parsing args: %s", err)
+	}
+
+	loglevel, err := logrus.ParseLevel(*loglevelFlag)
+	if err != nil {
+		logger.Warnf("Invalid loglevel %s, using %s instead.", *loglevelFlag, logrus.InfoLevel.String())
+		loglevel = logrus.InfoLevel
+	}
+	logger.SetLevel(loglevel)
 
 	provider, err := registry.Get(*providerName)
 	if err != nil {
-		log.Printf("Provider %s not found!", *providerName)
+		logger.Errorf("Provider %s not found!", *providerName)
 		return
 	}
 	games, err := provider.FindGames(providerOptions)
 	if err != nil {
-		log.Println(err)
+		logger.Errorf("Error obtaining game list: %s", err)
 		return
 	}
 
 	if len(games) > 0 {
 		ctx, cancel := context.WithCancel(context.Background())
-		processor := processor.NewProcessor(options)
+		processor := processor.NewProcessor(logger, options)
 		processor.Start(ctx)
 
 		for _, g := range games {

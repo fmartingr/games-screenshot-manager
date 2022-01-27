@@ -14,6 +14,7 @@ package retroarch
 
 import (
 	"github.com/fmartingr/games-screenshot-manager/internal/models"
+	"github.com/sirupsen/logrus"
 )
 
 const Name = "retroarch"
@@ -22,20 +23,30 @@ const libretroCoverURLBase = "http://thumbnails.libretro.com/"
 const datetimeLayout = "060102-150405"
 
 type RetroArchProvider struct {
+	logger *logrus.Entry
 }
 
 func (p *RetroArchProvider) FindGames(options models.ProviderOptions) ([]*models.Game, error) {
 	var userGames []*models.Game
 
-	playlists := readPlaylists(options.InputPath)
+	playlists, err := readPlaylists(p.logger, options.InputPath)
+	if err != nil {
+		return nil, err
+	}
 
 	for playlistName := range playlists {
 		for _, item := range playlists[playlistName].Items {
+			screenshots, err := findScreenshotsForGame(p.logger, item)
+			if err != nil {
+				p.logger.Errorf("Error retrieving game screenshots: %s", err)
+				continue
+			}
+
 			userGames = append(userGames, &models.Game{
 				Platform:    cleanPlatformName(playlistName),
 				Name:        cleanGameName(item.Label),
 				Provider:    Name,
-				Screenshots: findScreenshotsForGame(item),
+				Screenshots: screenshots,
 				CoverURL:    formatLibretroBoxartURL(playlistName, item.Label),
 			})
 		}
@@ -44,6 +55,8 @@ func (p *RetroArchProvider) FindGames(options models.ProviderOptions) ([]*models
 	return userGames, nil
 }
 
-func NewRetroArchProvider() *RetroArchProvider {
-	return &RetroArchProvider{}
+func NewRetroArchProvider(logger *logrus.Logger) models.Provider {
+	return &RetroArchProvider{
+		logger: logger.WithField("from", "provider."+Name),
+	}
 }

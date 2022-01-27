@@ -1,8 +1,8 @@
 package minecraft
 
 import (
+	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"strings"
 
@@ -10,12 +10,12 @@ import (
 	"github.com/fmartingr/games-screenshot-manager/pkg/helpers"
 )
 
-func getScreenshotsFromPath(game *models.Game, path string) {
+func getScreenshotsFromPath(game *models.Game, path string) error {
 	path = helpers.ExpandUser(path)
 	if _, err := os.Stat(path); !os.IsNotExist(err) {
 		files, err := ioutil.ReadDir(path)
 		if err != nil {
-			log.Fatal(err)
+			return fmt.Errorf("error reading from %s: %s", path, err)
 		}
 
 		for _, file := range files {
@@ -24,4 +24,5 @@ func getScreenshotsFromPath(game *models.Game, path string) {
 			}
 		}
 	}
+	return nil
 }

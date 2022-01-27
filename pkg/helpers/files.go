@@ -2,11 +2,13 @@ package helpers
 
 import (
 	"crypto/md5"
+	"errors"
 	"fmt"
 	"io"
-	"log"
 	"os"
 )
+
+var ErrCopyFileDestinationExists = errors.New("copy destination exists")
 
 func CopyFile(src, dst string) (int64, error) {
 	sourceFileStat, err := os.Stat(src)
@@ -26,8 +28,7 @@ func CopyFile(src, dst string) (int64, error) {
 
 	// Check if destination exists
 	if _, err := os.Stat(dst); !os.IsNotExist(err) {
-		log.Printf("- %s already exists, skipping...", dst)
-		return 0, nil
+		return 0, ErrCopyFileDestinationExists
 	}
 
 	destination, err := os.Create(dst)

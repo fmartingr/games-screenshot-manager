@@ -1,26 +1,33 @@
 package nintendo_switch
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
 
 	"github.com/fmartingr/games-screenshot-manager/internal/models"
+	"github.com/sirupsen/logrus"
 )
 
 const Name = "nintendo-switch"
 const platformName = "Nintendo Switch"
 const gameListURL = "https://fmartingr.github.io/switch-games-json/switch_id_names.json"
 
-type NintendoSwitchProvider struct{}
+type NintendoSwitchProvider struct {
+	logger *logrus.Entry
+}
 
 func (p *NintendoSwitchProvider) FindGames(options models.ProviderOptions) ([]*models.Game, error) {
-	switchGames := getSwitchGameList()
+	switchGames, err := getSwitchGameList()
+	if err != nil {
+		p.logger.Error(err)
+		return nil, err
+	}
+
 	var userGames []*models.Game
 
-	err := filepath.Walk(options.InputPath,
+	err = filepath.Walk(options.InputPath,
 		func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				return err
@@ -36,7 +43,7 @@ func (p *NintendoSwitchProvider) FindGames(options models.ProviderOptions) ([]*m
 				destinationName, err := time.Parse(layout, filenameParsed[0][0:14])
 
 				if err != nil {
-					log.Panic("Could not parse filename: ", err)
+					p.logger.Errorf("Could not parse filename '%s': %s", filename, err)
 				}
 
 				screenshot := models.Screenshot{Path: path, DestinationName: destinationName.Format(models.DatetimeFormat) + extension}
@@ -45,11 +52,13 @@ func (p *NintendoSwitchProvider) FindGames(options models.ProviderOptions) ([]*m
 			return nil
 		})
 	if err != nil {
-		log.Panic(err)
+		return nil, err
 	}
 	return userGames, nil
 }
 
-func NewNintendoSwitchProvider() *NintendoSwitchProvider {
-	return &NintendoSwitchProvider{}
+func NewNintendoSwitchProvider(logger *logrus.Logger) models.Provider {
+	return &NintendoSwitchProvider{
+		logger: logger.WithField("from", "provider."+Name),
+	}
 }
