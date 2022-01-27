@@ -1,19 +1,21 @@
 package playstation4
 
 import (
-	"log"
 	"os"
 	"path/filepath"
 	"time"
 
 	"github.com/fmartingr/games-screenshot-manager/internal/models"
 	"github.com/rwcarlsen/goexif/exif"
+	"github.com/sirupsen/logrus"
 )
 
 const Name = "playstation-4"
 const platformName = "PlayStation 4"
 
-type Playstation4Provider struct{}
+type Playstation4Provider struct {
+	logger *logrus.Entry
+}
 
 func (p *Playstation4Provider) FindGames(options models.ProviderOptions) ([]*models.Game, error) {
 	var userGames []*models.Game
@@ -34,12 +36,12 @@ func (p *Playstation4Provider) FindGames(options models.ProviderOptions) ([]*mod
 				if extension == ".jpg" {
 					fileDescriptor, errFileDescriptor := os.Open(filePath)
 					if errFileDescriptor != nil {
-						log.Printf("[warning] Couldn't open file %s: %s", fileName, errFileDescriptor)
+						p.logger.Warnf("Couldn't open file %s: %s", fileName, errFileDescriptor)
 						return nil
 					}
 					exifData, errExifData := exif.Decode(fileDescriptor)
 					if errExifData != nil {
-						log.Printf("[Error] Decoding EXIF data from %s: %s", filePath, errExifData)
+						p.logger.Errorf("Decoding EXIF data from %s: %s", filePath, errExifData)
 						return nil
 					}
 					defer fileDescriptor.Close()
@@ -54,11 +56,11 @@ func (p *Playstation4Provider) FindGames(options models.ProviderOptions) ([]*mod
 						if err == nil {
 							destinationName = videoDatetime.Format(models.DatetimeFormat)
 						} else {
-							log.Printf("[Warning] File does not follow datetime convention: %s. (%s) skipping...", fileName, err)
+							p.logger.Warnf("File %s does not follow datetime convention, skipping.", fileName, err)
 							return nil
 						}
 					} else {
-						log.Printf("[Warning] File does not follow datetime convention: %s, skipping...", fileName)
+						p.logger.Warnf("File %s does not follow datetime convention, skipping.", fileName)
 						return nil
 					}
 				}
@@ -70,11 +72,13 @@ func (p *Playstation4Provider) FindGames(options models.ProviderOptions) ([]*mod
 			return nil
 		})
 	if err != nil {
-		log.Panic(err)
+		return nil, err
 	}
 	return userGames, nil
 }
 
-func NewPlaystation4Provider() *Playstation4Provider {
-	return &Playstation4Provider{}
+func NewPlaystation4Provider(logger *logrus.Logger) models.Provider {
+	return &Playstation4Provider{
+		logger: logger.WithField("from", "provider."+Name),
+	}
 }

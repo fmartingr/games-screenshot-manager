@@ -2,8 +2,8 @@ package nintendo_switch
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
-	"log"
 	"strings"
 
 	"github.com/fmartingr/games-screenshot-manager/internal/models"
@@ -26,10 +26,10 @@ func findGameByEncryptedID(gameList []SwitchGame, encryptedGameID string) Switch
 	return gameFound
 }
 
-func getSwitchGameList() []SwitchGame {
+func getSwitchGameList() (result []SwitchGame, err error) {
 	response, err := helpers.DoRequest("GET", gameListURL)
 	if err != nil {
-		log.Panic(err)
+		return nil, fmt.Errorf("error getting switch game list: %s", err)
 	}
 
 	if response.Body != nil {
@@ -38,18 +38,15 @@ func getSwitchGameList() []SwitchGame {
 
 	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		log.Panic(err)
+		return nil, fmt.Errorf("error getting switch game list: %s", err)
 	}
 
-	switchGameList := []SwitchGame{}
-	jsonErr := json.Unmarshal(body, &switchGameList)
+	jsonErr := json.Unmarshal(body, &result)
 	if jsonErr != nil {
-		log.Fatal(jsonErr)
+		return nil, fmt.Errorf("error getting switch game list: %s", err)
 	}
 
-	log.Printf("Updated Nintendo Switch game list. Found %d games.", len(switchGameList))
-
-	return switchGameList
+	return
 }
 
 func addScreenshotToGame(userGames []*models.Game, switchGame SwitchGame, screenshot models.Screenshot) []*models.Game {

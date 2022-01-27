@@ -2,8 +2,8 @@ package retroarch
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
-	"log"
 	"net/url"
 	"os"
 	"path"
@@ -13,6 +13,7 @@ import (
 
 	"github.com/fmartingr/games-screenshot-manager/internal/models"
 	"github.com/fmartingr/games-screenshot-manager/pkg/helpers"
+	"github.com/sirupsen/logrus"
 )
 
 type retroArchPlaylistItem struct {
@@ -53,13 +54,13 @@ func cleanGameName(gameName string) string {
 	return splits[0]
 }
 
-func readPlaylists(playlistsPath string) map[string]retroArchPlaylist {
+func readPlaylists(logger *logrus.Entry, playlistsPath string) (map[string]retroArchPlaylist, error) {
 	var result = make(map[string]retroArchPlaylist)
 	playlistsPath = helpers.ExpandUser(playlistsPath)
 	if _, err := os.Stat(playlistsPath); !os.IsNotExist(err) {
 		files, err := ioutil.ReadDir(playlistsPath)
 		if err != nil {
-			log.Fatal(err)
+			return result, fmt.Errorf("error reading playlist directory: %s", err)
 		}
 
 		for _, file := range files {
@@ -67,18 +68,18 @@ func readPlaylists(playlistsPath string) map[string]retroArchPlaylist {
 				var item retroArchPlaylist
 				source, errOpen := os.Open(filepath.Join(playlistsPath, file.Name()))
 				if errOpen != nil {
-					log.Printf("[ERROR] Error reading playlist %s: %s", file.Name(), errOpen)
+					logger.Errorf("Error reading playlist %s: %s", file.Name(), errOpen)
 					continue
 				}
 				fileContents, errReadContent := ioutil.ReadAll(source)
 				if errReadContent != nil {
-					log.Printf("[ERROR] Reading contents of %s: %s", file.Name(), err)
+					logger.Errorf("Error reading contents of %s: %s", file.Name(), err)
 					continue
 				}
 
 				errUnmarshal := json.Unmarshal(fileContents, &item)
 				if errUnmarshal != nil {
-					log.Printf("[ERROR] Formatting %s: %s", file.Name(), errUnmarshal)
+					logger.Errorf("Error formatting %s: %s", file.Name(), errUnmarshal)
 					continue
 				}
 				result[strings.Replace(file.Name(), ".lpl", "", 1)] = item
@@ -86,16 +87,16 @@ func readPlaylists(playlistsPath string) map[string]retroArchPlaylist {
 			}
 		}
 	}
-	return result
+	return result, nil
 }
 
-func findScreenshotsForGame(item retroArchPlaylistItem) []models.Screenshot {
+func findScreenshotsForGame(logger *logrus.Entry, item retroArchPlaylistItem) ([]models.Screenshot, error) {
 	var result []models.Screenshot
 	filePath := filepath.Dir(item.Path)
 	fileName := strings.Replace(filepath.Base(item.Path), filepath.Ext(item.Path), "", 1)
 	files, err := ioutil.ReadDir(filePath)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	for _, file := range files {
@@ -119,7 +120,7 @@ func findScreenshotsForGame(item retroArchPlaylistItem) []models.Screenshot {
 				if err == nil {
 					screenshotDestinationName = screenshotDate.Format(models.DatetimeFormat) + extension
 				} else {
-					log.Printf("[error] Formatting screenshot %s: %s", file.Name(), err)
+					logger.Errorf("Error formatting screenshot %s: %s", file.Name(), err)
 					continue
 				}
 			}
@@ -127,5 +128,5 @@ func findScreenshotsForGame(item retroArchPlaylistItem) []models.Screenshot {
 			result = append(result, models.Screenshot{Path: filepath.Join(filePath, file.Name()), DestinationName: screenshotDestinationName})
 		}
 	}
-	return result
+	return result, nil
 }

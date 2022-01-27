@@ -7,11 +7,14 @@ import (
 
 	"github.com/fmartingr/games-screenshot-manager/internal/models"
 	"github.com/fmartingr/games-screenshot-manager/pkg/helpers"
+	"github.com/sirupsen/logrus"
 )
 
 const Name = "minecraft"
 
-type MinecraftProvider struct{}
+type MinecraftProvider struct {
+	logger *logrus.Entry
+}
 
 func (p *MinecraftProvider) FindGames(options models.ProviderOptions) ([]*models.Game, error) {
 	var result []*models.Game
@@ -19,24 +22,34 @@ func (p *MinecraftProvider) FindGames(options models.ProviderOptions) ([]*models
 	minecraftStandalone := models.Game{Name: "Minecraft", Platform: "PC", Notes: "Standalone"}
 
 	if runtime.GOOS == "linux" {
-		getScreenshotsFromPath(&minecraftStandalone, "~/.minecraft/screenshots")
+		if err := getScreenshotsFromPath(&minecraftStandalone, "~/.minecraft/screenshots"); err != nil {
+			p.logger.Error(err)
+		}
 
 		// Flatpak minecraft
 		minecraftFlatpak := models.Game{Name: "Minecraft", Platform: "PC", Notes: "Flatpak"}
 		for _, path := range [2]string{"~/.var/app/com.mojang.Minecraft/.minecraft/screenshots", "~/.var/app/com.mojang.Minecraft/data/minecraft/screenshots"} {
-			getScreenshotsFromPath(&minecraftFlatpak, path)
+			if err := getScreenshotsFromPath(&minecraftFlatpak, path); err != nil {
+				p.logger.Error(err)
+			}
 		}
 		result = append(result, &minecraftFlatpak)
 	} else if runtime.GOOS == "windows" {
-		getScreenshotsFromPath(&minecraftStandalone, filepath.Join(os.Getenv("APPDATA"), ".minecraft/screenshots"))
+		if err := getScreenshotsFromPath(&minecraftStandalone, filepath.Join(os.Getenv("APPDATA"), ".minecraft/screenshots")); err != nil {
+			p.logger.Error(err)
+		}
 	} else if runtime.GOOS == "darwin" {
-		getScreenshotsFromPath(&minecraftStandalone, filepath.Join(helpers.ExpandUser("~/Library/Application Support/minecraft/screenshots")))
+		if err := getScreenshotsFromPath(&minecraftStandalone, filepath.Join(helpers.ExpandUser("~/Library/Application Support/minecraft/screenshots"))); err != nil {
+			p.logger.Error(err)
+		}
 	}
 	result = append(result, &minecraftStandalone)
 
 	return result, nil
 }
 
-func NewMinecraftProvider() *MinecraftProvider {
-	return &MinecraftProvider{}
+func NewMinecraftProvider(logger *logrus.Logger) models.Provider {
+	return &MinecraftProvider{
+		logger: logger.WithField("from", "provider."+Name),
+	}
 }
