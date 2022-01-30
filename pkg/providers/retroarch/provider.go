@@ -55,7 +55,7 @@ func (p *RetroArchProvider) FindGames(options models.ProviderOptions) ([]*models
 	return userGames, nil
 }
 
-func NewRetroArchProvider(logger *logrus.Logger) models.Provider {
+func NewRetroArchProvider(logger *logrus.Logger, cache models.Cache) models.Provider {
 	return &RetroArchProvider{
 		logger: logger.WithField("from", "provider."+Name),
 	}

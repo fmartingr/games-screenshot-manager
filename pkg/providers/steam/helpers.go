@@ -2,6 +2,7 @@ package steam
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -9,6 +10,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/fmartingr/games-screenshot-manager/internal/models"
 	"github.com/fmartingr/games-screenshot-manager/pkg/helpers"
@@ -30,25 +32,47 @@ func getBasePathForOS() (string, error) {
 	return path, nil
 }
 
-func getSteamAppList(logger *logrus.Entry, c chan SteamAppList) {
+func getSteamAppList(logger *logrus.Entry, cache models.Cache, c chan SteamAppList) {
 	defer close(c)
+	cacheKey := "steam-applist"
+	download := true
+	var payload []byte
 
-	response, err := helpers.DoRequest("GET", gameListURL)
-	if err != nil {
-		logger.Errorf("Error making request for Steam APP List: %s", err)
+	result, err := cache.GetExpiry(cacheKey, 24*time.Hour)
+	if err != nil && !errors.Is(err, models.ErrCacheKeyDontExist) {
+		logger.Errorf("error retrieving cache: %s", err)
+		return
 	}
 
-	if response.Body != nil {
-		defer response.Body.Close()
+	if len(result) > 0 {
+		download = false
+		payload = []byte(result)
 	}
 
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		logger.Errorf("Error reading steam response: %s", err)
+	if download {
+		response, err := helpers.DoRequest("GET", gameListURL)
+		if err != nil {
+			logger.Errorf("Error making request for Steam APP List: %s", err)
+		}
+
+		if response.Body != nil {
+			defer response.Body.Close()
+		}
+
+		payload, err = ioutil.ReadAll(response.Body)
+		if err != nil {
+			logger.Errorf("Error reading steam response: %s", err)
+		}
+	}
+
+	if download {
+		if err := cache.Put(cacheKey, string(payload)); err != nil {
+			logger.Error(err)
+		}
 	}
 
 	steamListResponse := SteamAppListResponse{}
-	jsonErr := json.Unmarshal(body, &steamListResponse)
+	jsonErr := json.Unmarshal(payload, &steamListResponse)
 	if jsonErr != nil {
 		logger.Errorf("Error unmarshalling steam's response: %s", jsonErr)
 	}
