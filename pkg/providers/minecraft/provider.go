@@ -48,7 +48,7 @@ func (p *MinecraftProvider) FindGames(options models.ProviderOptions) ([]*models
 	return result, nil
 }
 
-func NewMinecraftProvider(logger *logrus.Logger) models.Provider {
+func NewMinecraftProvider(logger *logrus.Logger, cache models.Cache) models.Provider {
 	return &MinecraftProvider{
 		logger: logger.WithField("from", "provider."+Name),
 	}

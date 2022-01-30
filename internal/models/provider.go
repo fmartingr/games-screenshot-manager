@@ -10,4 +10,4 @@ type Provider interface {
 	FindGames(options ProviderOptions) ([]*Game, error)
 }
 
-type ProviderFactory func(logger *logrus.Logger) Provider
+type ProviderFactory func(logger *logrus.Logger, cache Cache) Provider

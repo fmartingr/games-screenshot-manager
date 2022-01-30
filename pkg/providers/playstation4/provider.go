@@ -77,7 +77,7 @@ func (p *Playstation4Provider) FindGames(options models.ProviderOptions) ([]*mod
 	return userGames, nil
 }
 
-func NewPlaystation4Provider(logger *logrus.Logger) models.Provider {
+func NewPlaystation4Provider(logger *logrus.Logger, cache models.Cache) models.Provider {
 	return &Playstation4Provider{
 		logger: logger.WithField("from", "provider."+Name),
 	}

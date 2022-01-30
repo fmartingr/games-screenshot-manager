@@ -57,7 +57,7 @@ func (p *NintendoSwitchProvider) FindGames(options models.ProviderOptions) ([]*m
 	return userGames, nil
 }
 
-func NewNintendoSwitchProvider(logger *logrus.Logger) models.Provider {
+func NewNintendoSwitchProvider(logger *logrus.Logger, cache models.Cache) models.Provider {
 	return &NintendoSwitchProvider{
 		logger: logger.WithField("from", "provider."+Name),
 	}
