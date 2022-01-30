@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/fmartingr/games-screenshot-manager/internal/models"
+	"github.com/fmartingr/games-screenshot-manager/pkg/cache"
 	"github.com/fmartingr/games-screenshot-manager/pkg/processor"
 	"github.com/fmartingr/games-screenshot-manager/pkg/providers/minecraft"
 	"github.com/fmartingr/games-screenshot-manager/pkg/providers/nintendo_switch"
@@ -27,7 +28,9 @@ func Start() {
 	logger := logrus.New()
 	flagSet := flag.NewFlagSet("gsm", flag.ExitOnError)
 
-	registry := registry.NewProviderRegistry(logger)
+	cache := cache.NewFileCache(logger)
+
+	registry := registry.NewProviderRegistry(logger, cache)
 	registry.Register(minecraft.Name, minecraft.NewMinecraftProvider)
 	registry.Register(nintendo_switch.Name, nintendo_switch.NewNintendoSwitchProvider)
 	registry.Register(playstation4.Name, playstation4.NewPlaystation4Provider)

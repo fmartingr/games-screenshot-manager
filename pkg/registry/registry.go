@@ -11,7 +11,9 @@ var ErrProviderAlreadyRegistered = errors.New("provider already registered")
 var ErrProviderNotRegistered = errors.New("provider not registered")
 
 type ProviderRegistry struct {
-	logger    *logrus.Entry
+	logger *logrus.Entry
+	cache  models.Cache
+
 	providers map[string]*models.Provider
 }
 
@@ -21,7 +23,7 @@ func (r *ProviderRegistry) Register(name string, providerFactory models.Provider
 		return ErrProviderAlreadyRegistered
 	}
 
-	provider := providerFactory(r.logger.Logger)
+	provider := providerFactory(r.logger.Logger, r.cache)
 	r.providers[name] = &provider
 
 	return nil
@@ -35,9 +37,10 @@ func (r *ProviderRegistry) Get(providerName string) (models.Provider, error) {
 	return *provider, nil
 }
 
-func NewProviderRegistry(logger *logrus.Logger) *ProviderRegistry {
+func NewProviderRegistry(logger *logrus.Logger, cache models.Cache) *ProviderRegistry {
 	return &ProviderRegistry{
 		logger:    logger.WithField("from", "registry"),
+		cache:     cache,
 		providers: make(map[string]*models.Provider),
 	}
 }

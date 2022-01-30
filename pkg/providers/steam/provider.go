@@ -43,6 +43,7 @@ type SteamAppListResponse struct {
 
 type SteamProvider struct {
 	logger *logrus.Entry
+	cache  models.Cache
 }
 
 func (p *SteamProvider) FindGames(options models.ProviderOptions) ([]*models.Game, error) {
@@ -53,7 +54,7 @@ func (p *SteamProvider) FindGames(options models.ProviderOptions) ([]*models.Gam
 
 	var localGames []*models.Game
 	c := make(chan SteamAppList)
-	go getSteamAppList(p.logger, c)
+	go getSteamAppList(p.logger, p.cache, c)
 
 	users, err := guessUsers(basePath)
 	if err != nil {
@@ -93,8 +94,9 @@ func (p *SteamProvider) FindGames(options models.ProviderOptions) ([]*models.Gam
 	return localGames, nil
 }
 
-func NewSteamProvider(logger *logrus.Logger) models.Provider {
+func NewSteamProvider(logger *logrus.Logger, cache models.Cache) models.Provider {
 	return &SteamProvider{
+		cache:  cache,
 		logger: logger.WithField("from", "provider."+Name),
 	}
 }
