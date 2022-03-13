@@ -12,7 +12,6 @@ Use the appropriate ID with the `-provider` flag. [See examples below](#Usage)
 | --------------- | ----------------- | ----- | ------- | ----- | ------ | --------------------------------------------------- |
 | Steam           | `steam`           | Yes   | Yes     | Yes   | Yes    |
 | Minecraft       | `minecraft`       | Yes   | Yes     | Yes   | No     |
-| Nintendo Switch | `nintendo-switch` | -     | -       | -     | No     | Requires `-input-path` pointing to ALBUM folder     |
 | PlayStation 4   | `playstation-4`   | -     | -       | -     | No     | Requires `-input-path` pointing to PS4 folder       |
 | RetroArch       | `retroarch`       | -     | -       | -     | Yes    | Requires `-input-path` pointing to Playlists folder |
 
