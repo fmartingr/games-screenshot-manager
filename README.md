@@ -10,10 +10,15 @@ Use the appropriate ID with the `-provider` flag. [See examples below](#Usage)
 
 | Name            | ID                | Linux | Windows | macOS | Covers | Notes                                               |
 | --------------- | ----------------- | ----- | ------- | ----- | ------ | --------------------------------------------------- |
-| Steam           | `steam`           | Yes   | Yes     | Yes   | Yes    |
 | Minecraft       | `minecraft`       | Yes   | Yes     | Yes   | No     |
 | PlayStation 4   | `playstation-4`   | -     | -       | -     | No     | Requires `-input-path` pointing to PS4 folder       |
 | RetroArch       | `retroarch`       | -     | -       | -     | Yes    | Requires `-input-path` pointing to Playlists folder |
+| Steam           | `steam`           | Yes   | Yes     | Yes   | Yes    |
+| Xbox Game Bar | `xbox-game-bar` | - | - | - | No | Requires `-input-path` pointing to the folder holding the captures |
+
+## Requirements
+
+- [exiftool](https://exiftool.org/) to parse EXIF data from files.
 
 ## How it works
 
