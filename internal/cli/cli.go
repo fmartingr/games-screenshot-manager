@@ -85,5 +85,7 @@ func Start() {
 
 		processor.Wait()
 		cancel()
+	} else {
+		logger.Info("No games found.")
 	}
 }

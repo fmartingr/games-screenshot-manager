@@ -23,6 +23,7 @@ func (p *Playstation4Provider) FindGames(options models.ProviderOptions) ([]*mod
 	err := filepath.Walk(options.InputPath,
 		func(filePath string, info os.FileInfo, err error) error {
 			if err != nil {
+				p.logger.WithField("path", filePath).WithError(err).Error()
 				return err
 			}
 
@@ -39,12 +40,12 @@ func (p *Playstation4Provider) FindGames(options models.ProviderOptions) ([]*mod
 						p.logger.Warnf("Couldn't open file %s: %s", fileName, errFileDescriptor)
 						return nil
 					}
+					defer fileDescriptor.Close()
 					exifData, errExifData := exif.Decode(fileDescriptor)
 					if errExifData != nil {
 						p.logger.Errorf("Decoding EXIF data from %s: %s", filePath, errExifData)
 						return nil
 					}
-					defer fileDescriptor.Close()
 
 					exifDateTime, _ := exifData.DateTime()
 					destinationName = exifDateTime.Format(models.DatetimeFormat)
@@ -56,7 +57,7 @@ func (p *Playstation4Provider) FindGames(options models.ProviderOptions) ([]*mod
 						if err == nil {
 							destinationName = videoDatetime.Format(models.DatetimeFormat)
 						} else {
-							p.logger.Warnf("File %s does not follow datetime convention, skipping.", fileName, err)
+							p.logger.WithError(err).Warnf("File %s does not follow datetime convention, skipping.", fileName)
 							return nil
 						}
 					} else {
@@ -66,7 +67,7 @@ func (p *Playstation4Provider) FindGames(options models.ProviderOptions) ([]*mod
 				}
 
 				screenshot := models.Screenshot{Path: filePath, DestinationName: destinationName + extension}
-				addScreenshotToGame(userGames, gameName, screenshot)
+				userGames = addScreenshotToGame(userGames, gameName, screenshot)
 			}
 
 			return nil
