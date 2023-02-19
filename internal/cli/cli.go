@@ -12,6 +12,7 @@ import (
 	"github.com/fmartingr/games-screenshot-manager/pkg/providers/playstation4"
 	"github.com/fmartingr/games-screenshot-manager/pkg/providers/retroarch"
 	"github.com/fmartingr/games-screenshot-manager/pkg/providers/steam"
+	"github.com/fmartingr/games-screenshot-manager/pkg/providers/worldofwarcraft"
 	"github.com/fmartingr/games-screenshot-manager/pkg/providers/xbox_game_bar"
 	"github.com/fmartingr/games-screenshot-manager/pkg/registry"
 	"github.com/sirupsen/logrus"
@@ -36,6 +37,7 @@ func Start() {
 	registry.Register(xbox_game_bar.Name, xbox_game_bar.NewXboxGameGarProvider)
 	registry.Register(steam.Name, steam.NewSteamProvider)
 	registry.Register(retroarch.Name, retroarch.NewRetroArchProvider)
+	registry.Register(worldofwarcraft.Name, worldofwarcraft.NewWorldOfWarcraftProvider)
 
 	options := models.Options{
 		ProcessBufferSize: 32,
