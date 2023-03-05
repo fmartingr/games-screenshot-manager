@@ -55,3 +55,21 @@ func NewScreenshotWithoutDestination(path string) Screenshot {
 		Path: path,
 	}
 }
+
+func AddScreenshotToGame(platform string, userGames []*Game, gameName string, screenshot Screenshot) []*Game {
+	var foundGame *Game
+	for gameIndex, game := range userGames {
+		if game.Name == gameName {
+			foundGame = game
+			userGames[gameIndex].Screenshots = append(userGames[gameIndex].Screenshots, screenshot)
+		}
+	}
+
+	if foundGame == nil {
+		foundGame := Game{Name: gameName, ID: gameName, Platform: platform, Provider: platform}
+		foundGame.Screenshots = append(foundGame.Screenshots, screenshot)
+		userGames = append(userGames, &foundGame)
+	}
+
+	return userGames
+}

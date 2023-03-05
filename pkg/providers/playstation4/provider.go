@@ -5,8 +5,8 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/cozy/goexif2/exif"
 	"github.com/fmartingr/games-screenshot-manager/internal/models"
-	"github.com/rwcarlsen/goexif/exif"
 	"github.com/sirupsen/logrus"
 )
 
@@ -67,7 +67,7 @@ func (p *Playstation4Provider) FindGames(options models.ProviderOptions) ([]*mod
 				}
 
 				screenshot := models.Screenshot{Path: filePath, DestinationName: destinationName + extension}
-				userGames = addScreenshotToGame(userGames, gameName, screenshot)
+				userGames = models.AddScreenshotToGame(Name, userGames, gameName, screenshot)
 			}
 
 			return nil
