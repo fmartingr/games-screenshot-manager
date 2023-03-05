@@ -4,8 +4,8 @@ go 1.19
 
 require (
 	github.com/barasher/go-exiftool v1.8.0
+	github.com/cozy/goexif2 v1.2.0
 	github.com/gosimple/slug v1.13.1
-	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
 	github.com/sirupsen/logrus v1.9.0
 )
 
