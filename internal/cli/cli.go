@@ -10,6 +10,7 @@ import (
 	"github.com/fmartingr/games-screenshot-manager/pkg/processor"
 	"github.com/fmartingr/games-screenshot-manager/pkg/providers/minecraft"
 	"github.com/fmartingr/games-screenshot-manager/pkg/providers/playstation4"
+	"github.com/fmartingr/games-screenshot-manager/pkg/providers/playstation5"
 	"github.com/fmartingr/games-screenshot-manager/pkg/providers/retroarch"
 	"github.com/fmartingr/games-screenshot-manager/pkg/providers/steam"
 	"github.com/fmartingr/games-screenshot-manager/pkg/providers/xbox_game_bar"
@@ -33,6 +34,7 @@ func Start() {
 	registry := registry.NewProviderRegistry(logger, cache)
 	registry.Register(minecraft.Name, minecraft.NewMinecraftProvider)
 	registry.Register(playstation4.Name, playstation4.NewPlaystation4Provider)
+	registry.Register(playstation5.Name, playstation5.NewPlaystation5Provider)
 	registry.Register(xbox_game_bar.Name, xbox_game_bar.NewXboxGameGarProvider)
 	registry.Register(steam.Name, steam.NewSteamProvider)
 	registry.Register(retroarch.Name, retroarch.NewRetroArchProvider)
