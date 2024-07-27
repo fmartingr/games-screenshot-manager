@@ -2,7 +2,7 @@ package worldofwarcraft
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -37,7 +37,7 @@ func (p *WorldOfWarcraftProvider) FindGames(options models.ProviderOptions) ([]*
 		path = "/Applications/World of Warcraft/_retail_/Screenshots"
 	}
 
-	files, err := ioutil.ReadDir(path)
+	files, err := os.ReadDir(path)
 	if err != nil {
 		return nil, fmt.Errorf("error reading from path %s: %s", options.InputPath, err)
 	}
