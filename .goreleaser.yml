@@ -1,37 +1,80 @@
-# This is an example .goreleaser.yml file with some sane defaults.
-# Make sure to check the documentation at http://goreleaser.com
 before:
   hooks:
-    # You may remove this if you don't use go modules.
     - go mod tidy
-    # # you may remove this if you don't need go generate
-    # - go generate ./...
+
+git:
+  ignore_tags:
+    - "{{ if not .IsNightly }}*-rc*{{ end }}"
+
 builds:
-  - env:
+  - binary: games-screenshot-manager
+    main: ./cmd/games-screenshot-manager
+    env:
       - CGO_ENABLED=0
     goos:
       - linux
       - windows
       - darwin
-    main: ./cmd/games-screenshot-manager
+    goarch:
+      - amd64
+      - arm
+      - arm64
+    goarm:
+      - "7"
+    ignore:
+      - goos: darwin
+        goarch: arm
+      - goos: windows
+        goarch: arm
+      - goos: windows
+        goarch: arm64
+
 archives:
-  - replacements:
-      darwin: macos
-      linux: linux
-      windows: windows
-      386: i386
-      amd64: x86_64
-source:
-  enabled: true
-  name_template: '{{ .ProjectName }}-{{ .Version }}-sources'
-  format: 'tar.gz'
+  - id: games-screenshot-manager
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- if eq .Os "darwin" }}Darwin{{- else if eq .Os "linux" }}Linux{{- else if eq .Os "windows" }}Windows{{- else }}{{ .Os }}{{ end }}_
+      {{- if eq .Arch "amd64" }}x86_64{{- else if eq .Arch "arm64" }}aarch64{{- else }}{{ .Arch }}{{ end }}_{{ .Version }}
+    format_overrides:
+      - goos: windows
+        format: zip
+
 checksum:
-  name_template: 'checksums.txt'
+  name_template: "checksums.txt"
+
 snapshot:
-  name_template: "{{ .Tag }}-next"
+  name_template: "{{ incpatch .Version }}-next"
+
 changelog:
   sort: asc
+  groups:
+    - title: Features
+      regexp: '^.*?feat(\([[:word:]]+\))??!?:.+$'
+      order: 0
+    - title: "Fixes"
+      regexp: '^.*?fix(\([[:word:]]+\))??!?:.+$'
+      order: 1
+    - title: "Performance"
+      regexp: '^.*?perf(\([[:word:]]+\))??!?:.+$'
+      order: 2
+    - title: API
+      regexp: '^.*?api(\([[:word:]]+\))??!?:.+$'
+      order: 3
+    - title: Documentation
+      regexp: '^.*?docs(\([[:word:]]+\))??!?:.+$'
+      order: 4
+    - title: "Tests"
+      regexp: '^.*?test(\([[:word:]]+\))??!?:.+$'
+      order: 5
+    - title: CI and Delivery
+      regexp: '^.*?ci(\([[:word:]]+\))??!?:.+$'
+      order: 6
+    - title: Others
+      order: 999
   filters:
     exclude:
-      - '^docs:'
-      - '^test:'
+      - "^deps:"
+      - "^chore\\(deps\\):"
+
+release:
+  prerelease: auto
