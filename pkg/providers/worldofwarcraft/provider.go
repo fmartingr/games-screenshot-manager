@@ -14,7 +14,7 @@ import (
 )
 
 const (
-	Name           = "worldofwarcraft"
+	Name           = "wow"
 	platformName   = "PC"
 	dateTimeLayout = "010206_150405"
 	filenamePrefix = "WoWScrnShot_"

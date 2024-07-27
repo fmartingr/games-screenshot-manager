@@ -8,14 +8,14 @@ A simple tool to collect and sort games screenshots from different platforms.
 
 Use the appropriate ID with the `-provider` flag. [See examples below](#Usage)
 
-| Name          | ID              | Linux | Windows | macOS | Covers | Notes                                                              |
-| ------------- | --------------- | ----- | ------- | ----- | ------ | ------------------------------------------------------------------ |
-| Minecraft     | `minecraft`     | Yes   | Yes     | Yes   | No     |
-| PlayStation 4 | `playstation-4` | -     | -       | -     | No     | Requires `-input-path` pointing to `PS4` folder                    |
-| PlayStation 5 | `playstation-5` | -     | -       | -     | No     | Requires `-input-path` pointing to `PS5` folder                    |
-| RetroArch     | `retroarch`     | -     | -       | -     | Yes    | Requires `-input-path` pointing to Playlists folder                |
-| Steam         | `steam`         | Yes   | Yes     | Yes   | Yes    |
-| Xbox Game Bar | `xbox-game-bar` | -     | -       | -     | No     | Requires `-input-path` pointing to the folder holding the captures |
+| Name              | ID              | Linux | Windows | macOS | Covers | Notes                                                              |
+| ----------------- | --------------- | ----- | ------- | ----- | ------ | ------------------------------------------------------------------ |
+| Minecraft         | `minecraft`     | Yes   | Yes     | Yes   | No     |
+| PlayStation 4     | `playstation-4` | -     | -       | -     | No     | Requires `-input-path` pointing to PS4 folder                      |
+| RetroArch         | `retroarch`     | -     | -       | -     | Yes    | Requires `-input-path` pointing to Playlists folder                |
+| Steam             | `steam`         | Yes   | Yes     | Yes   | Yes    |
+| World of Wardraft | `wow`           | Yes   | Yes     | Yes   | No     |
+| Xbox Game Bar     | `xbox-game-bar` | -     | -       | -     | No     | Requires `-input-path` pointing to the folder holding the captures |
 
 ## Requirements
 
