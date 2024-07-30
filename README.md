@@ -20,7 +20,7 @@ Use the appropriate ID with the `-provider` flag. [See examples below](#Usage)
 
 ## Requirements
 
-- [exiftool](https://exiftool.org/) to parse EXIF data from files. (Using [cozy/goexif2 library](https://github.com/cozy/goexif2))
+- [exiftool](https://exiftool.org/) to parse EXIF data from files. (Using [baransher/go-exiftool library](https://github.com/barasher/go-exiftool))
 
 ## How it works
 
