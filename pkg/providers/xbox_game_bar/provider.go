@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/barasher/go-exiftool"
 	"github.com/fmartingr/games-screenshot-manager/internal/exif"
 	"github.com/fmartingr/games-screenshot-manager/internal/models"
 	"github.com/fmartingr/games-screenshot-manager/pkg/helpers"
@@ -41,11 +42,17 @@ func (p *XboxGameBarProvider) FindGames(options models.ProviderOptions) ([]*mode
 
 	games := make(map[string]*models.Game)
 
+	et, err := exiftool.NewExiftool()
+	if err != nil {
+		return nil, fmt.Errorf("error intializing exiftool: %v\n", err)
+	}
+	defer et.Close()
+
 	for _, file := range files {
 		fullPath := filepath.Join(path, file.Name())
 
 		if strings.Contains(file.Name(), ".png") || strings.Contains(file.Name(), ".mp4") {
-			tags, err := exif.GetTags(fullPath)
+			tags, err := exif.GetTags(et, fullPath)
 			if err != nil {
 				p.logger.Errorf("err: %s", err)
 				continue

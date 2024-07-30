@@ -1,17 +1,24 @@
 package playstation4
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"time"
 
-	"github.com/cozy/goexif2/exif"
+	"github.com/barasher/go-exiftool"
+	"github.com/fmartingr/games-screenshot-manager/internal/exif"
 	"github.com/fmartingr/games-screenshot-manager/internal/models"
 	"github.com/sirupsen/logrus"
 )
 
-const Name = "playstation-4"
-const platformName = "PlayStation 4"
+const (
+	ID             = "ps4"
+	Name           = "playstation-4"
+	platformName   = "PlayStation 4"
+	exifTimeLayout = "2006:01:02 15:04:05-07:00"
+	exifTimeTag    = "FileModifyDate"
+)
 
 type Playstation4Provider struct {
 	logger *logrus.Entry
@@ -20,7 +27,13 @@ type Playstation4Provider struct {
 func (p *Playstation4Provider) FindGames(options models.ProviderOptions) ([]*models.Game, error) {
 	var userGames []*models.Game
 
-	err := filepath.Walk(options.InputPath,
+	et, err := exiftool.NewExiftool()
+	if err != nil {
+		return nil, fmt.Errorf("error intializing exiftool: %w", err)
+	}
+	defer et.Close()
+
+	err = filepath.Walk(options.InputPath,
 		func(filePath string, info os.FileInfo, err error) error {
 			if err != nil {
 				p.logger.WithField("path", filePath).WithError(err).Error()
@@ -35,21 +48,18 @@ func (p *Playstation4Provider) FindGames(options models.ProviderOptions) ([]*mod
 				layout := "20060102150405"
 
 				if extension == ".jpg" {
-					fileDescriptor, errFileDescriptor := os.Open(filePath)
-					if errFileDescriptor != nil {
-						p.logger.Warnf("Couldn't open file %s: %s", fileName, errFileDescriptor)
-						return nil
-					}
-					defer fileDescriptor.Close()
-					exifData, errExifData := exif.Decode(fileDescriptor)
-					if errExifData != nil {
-						p.logger.Errorf("Decoding EXIF data from %s: %s", filePath, errExifData)
+					exifTags, err := exif.GetTags(et, filePath)
+					if err != nil {
+						p.logger.WithError(err).Errorf("Error getting EXIF tags from %s", filePath)
 						return nil
 					}
 
-					exifDateTime, _ := exifData.DateTime()
-					destinationName = exifDateTime.Format(models.DatetimeFormat)
-
+					fileDate, err := time.Parse(exifTimeLayout, exifTags[exifTimeTag])
+					if err != nil {
+						p.logger.Warnf("error parsing media creation time %s for %s: %s", exifTags[exifTimeTag], filePath, err)
+						return nil
+					}
+					destinationName = fileDate.Format(models.DatetimeFormat)
 				} else if extension == ".mp4" {
 					if len(fileName) >= len(layout)+len(extension) {
 						videoDatetime, err := time.Parse(layout, fileName[len(fileName)-len(extension)-len(layout):len(fileName)-len(extension)])

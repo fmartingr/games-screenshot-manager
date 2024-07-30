@@ -8,6 +8,7 @@ import (
 	"github.com/fmartingr/games-screenshot-manager/internal/models"
 	"github.com/fmartingr/games-screenshot-manager/pkg/cache"
 	"github.com/fmartingr/games-screenshot-manager/pkg/processor"
+	"github.com/fmartingr/games-screenshot-manager/pkg/providers/guild_wars_2"
 	"github.com/fmartingr/games-screenshot-manager/pkg/providers/minecraft"
 	"github.com/fmartingr/games-screenshot-manager/pkg/providers/playstation4"
 	"github.com/fmartingr/games-screenshot-manager/pkg/providers/playstation5"
@@ -40,6 +41,7 @@ func Start() {
 	registry.Register(steam.Name, steam.NewSteamProvider)
 	registry.Register(retroarch.Name, retroarch.NewRetroArchProvider)
 	registry.Register(worldofwarcraft.Name, worldofwarcraft.NewWorldOfWarcraftProvider)
+	registry.Register(guild_wars_2.ID, guild_wars_2.NewGuildWars2Provider)
 
 	options := models.Options{
 		ProcessBufferSize: 32,
