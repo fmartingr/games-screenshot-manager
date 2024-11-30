@@ -63,9 +63,14 @@ func (p *XboxGameBarProvider) FindGames(options models.ProviderOptions) ([]*mode
 				titleTag = "Title"
 			}
 
-			gameName := tags[titleTag]
+			var gameName string
+			for tagKey, tagValue := range tags {
+				if strings.HasPrefix(tagKey, titleTag) {
+					gameName = tagValue
+				}
+			}
 
-			game, exists := games[tags[titleTag]]
+			game, exists := games[gameName]
 			if !exists {
 				game = &models.Game{
 					ID:       slug.Make(gameName),
@@ -73,23 +78,29 @@ func (p *XboxGameBarProvider) FindGames(options models.ProviderOptions) ([]*mode
 					Platform: platformName,
 					Provider: Name,
 				}
-				games[tags[titleTag]] = game
+				games[gameName] = game
 			}
 
 			var destinationName string
 
 			if strings.Contains(file.Name(), ".png") {
-				metadataTag := "MicrosoftGameDVRExtended"
-				metadataString, exists := tags[metadataTag]
-				if !exists {
-					p.logger.Warnf("no metadata found for %s", file.Name())
+				var metadataString string
+				for tagKey, tagValue := range tags {
+					if strings.HasPrefix(tagKey, "MicrosoftGameDVRExtended") {
+						metadataString = tagValue
+					}
 				}
-				var metadata dvrMetadata
-				if err := json.Unmarshal([]byte(metadataString), &metadata); err != nil {
-					p.logger.Errorf("error parsing metadata for %s: %s", file.Name(), err)
+				if metadataString == "" {
+					p.logger.Warnf("no metadata found for %s", file.Name())
+				} else {
+					var metadata dvrMetadata
+					if err := json.Unmarshal([]byte(metadataString), &metadata); err != nil {
+						p.logger.Errorf("error parsing metadata for %s: %s", file.Name(), err)
+						continue
+					}
+					destinationName = metadata.StartTime.Format(models.DatetimeFormat) + ".png"
 				}
 
-				destinationName = metadata.StartTime.Format(models.DatetimeFormat) + ".png"
 			} else {
 				mediaCreateTag := "MediaCreateDate"
 				mediaCreateString, exists := tags[mediaCreateTag]
