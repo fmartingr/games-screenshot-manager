@@ -4,7 +4,7 @@ go 1.22
 
 require (
 	github.com/barasher/go-exiftool v1.10.0
-	github.com/gosimple/slug v1.14.0
+	github.com/gosimple/slug v1.15.0
 	github.com/sirupsen/logrus v1.9.3
 )
 
