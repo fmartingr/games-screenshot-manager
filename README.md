@@ -4,27 +4,41 @@
 
 A simple tool to collect and sort games screenshots from different platforms.
 
+## Usage
+
+Install the binary from the [releases page](https://github.com/fmartingr/games-screenshot-manager/releases) or by using:
+
+```
+go install github.com/fmartingr/games-screenshot-manager@latest
+```
+
+Create a configuration file following the [example config](./config.example.toml).
+
+Run the binary or the installed command:
+
+```
+games-screenshot-manager -config ./config.toml
+```
+
 ## Supported providers
 
-Use the appropriate ID with the `-provider` flag. [See examples below](#Usage)
-
-| Name              | ID              | Linux | Windows | macOS | Covers | Notes                                                                |
-| ----------------- | --------------- | ----- | ------- | ----- | ------ | -------------------------------------------------------------------- |
-| Guild Wars 2      | `gw2`           | No    | Yes     | No    | No     | Works on unsupported platforms with `-input-path` pointing to folder |
+| Name              | ID              | Linux | Windows | macOS | Covers | Notes                                                                     |
+| ----------------- | --------------- | ----- | ------- | ----- | ------ | ------------------------------------------------------------------------- |
+| Guild Wars 2      | `gw2`           | No    | Yes     | No    | No     | Works on unsupported platforms with `path` pointing to screenshtos folder |
 | Minecraft         | `minecraft`     | Yes   | Yes     | Yes   | No     |
-| PlayStation 4     | `playstation-4` | -     | -       | -     | No     | Requires `-input-path` pointing to PS4 folder                        |
-| RetroArch         | `retroarch`     | -     | -       | -     | Yes    | Requires `-input-path` pointing to Playlists folder                  |
+| PlayStation 4     | `playstation-4` | -     | -       | -     | No     | Requires `path` pointing to PS4 folder                                    |
+| PlayStation 5     | `playstation-5` | -     | -       | -     | No     | Requires `path` pointing to PS5 folder                                    |
 | Steam             | `steam`         | Yes   | Yes     | Yes   | Yes    |
-| World of Wardraft | `wow`           | No    | Yes     | Yes   | No     | Works on unsupported platforms with `-input-path` pointing to folder |
-| Xbox Game Bar     | `xbox-game-bar` | -     | -       | -     | No     | Requires `-input-path` pointing to the folder holding the captures   |
+| World of Wardraft | `wow`           | No    | Yes     | Yes   | No     | Works on unsupported platforms with `path` pointing to screenshots folder |
+| Xbox Game Bar     | `xbox-game-bar` | -     | -       | -     | No     | Requires `path` pointing to the folder holding the captures               |
 
 ## Requirements
 
-- [exiftool](https://exiftool.org/) to parse EXIF data from files. (Using [baransher/go-exiftool library](https://github.com/barasher/go-exiftool))
+- [exiftool](https://exiftool.org/) to parse EXIF data from files. (Using [baransher/go-exiftool library](https://github.com/barasher/go-exiftool)) (For PlayStation 4 & 5 providers)
 
 ## How it works
 
-Each provider has it's own way of finding the screenshots, but ideally the screenshots folder for games are known to us users so we only need to traverse them and find image files except for installations that may vary (like Retroarch) or systems outside of the PC ecosystem (Playstation).
+Each provider has it's own way of finding the screenshots, but ideally the screenshots folder for games are known to us users so we only need to traverse them and find image files except for installations that may vary or systems outside of the PC ecosystem (Playstation).
 
 In some cases to have all the information for a particular provider we need to retrieve more data from the internet, for example the Steam game list to associate names to the IDs ~~or in Nintendo Switch's case a community provided list to associate the internal ID with the Game's name~~.
 
@@ -39,7 +53,7 @@ This project initially started as a Nintendo Switch helper to import and properl
 ## Installation
 
 ```
-go get -u github.com/fmartingr/games-screenshot-manager
+go install github.com/fmartingr/games-screenshot-manager@latest
 ```
 
 Or get the latest binary build from the [releases page](https://github.com/fmartingr/games-screenshot-manager/releases)

@@ -12,7 +12,6 @@ import (
 	"github.com/fmartingr/games-screenshot-manager/pkg/providers/minecraft"
 	"github.com/fmartingr/games-screenshot-manager/pkg/providers/playstation4"
 	"github.com/fmartingr/games-screenshot-manager/pkg/providers/playstation5"
-	"github.com/fmartingr/games-screenshot-manager/pkg/providers/retroarch"
 	"github.com/fmartingr/games-screenshot-manager/pkg/providers/steam"
 	"github.com/fmartingr/games-screenshot-manager/pkg/providers/worldofwarcraft"
 	"github.com/fmartingr/games-screenshot-manager/pkg/providers/xbox_game_bar"
@@ -39,7 +38,6 @@ func Start() {
 	registry.Register(playstation5.Name, playstation5.NewPlaystation5Provider)
 	registry.Register(xbox_game_bar.Name, xbox_game_bar.NewXboxGameGarProvider)
 	registry.Register(steam.Name, steam.NewSteamProvider)
-	registry.Register(retroarch.Name, retroarch.NewRetroArchProvider)
 	registry.Register(worldofwarcraft.Name, worldofwarcraft.NewWorldOfWarcraftProvider)
 	registry.Register(guild_wars_2.ID, guild_wars_2.NewGuildWars2Provider)
 

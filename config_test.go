@@ -1,0 +1,143 @@
+package gamesscreenshotmanager
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+)
+
+func TestConfigLoad(t *testing.T) {
+	// Create a temporary test config file
+	tmpDir := t.TempDir()
+	testConfigPath := filepath.Join(tmpDir, "test_config.toml")
+
+	testConfig := `
+dry_run = false
+output_path = "test_output"
+[global]
+download_covers = true
+
+[gallery]
+create_web_gallery = true
+
+[providers.guild_wars_2]
+path = "test_gw2_path"
+
+[providers.minecraft]
+path = "test_minecraft_path"
+
+[providers.steam]
+userdata_path = "test_steam_userdata"
+recordings_path = "test_steam_recordings"
+custom_games = { "1234567890" = "Test Game" }
+`
+
+	err := os.WriteFile(testConfigPath, []byte(testConfig), 0644)
+	require.NoError(t, err)
+
+	// Test loading the config
+	config, err := NewConfig(testConfigPath)
+	require.NoError(t, err)
+
+	// Test global settings
+	require.Equal(t, "test_output", config.OutputPath)
+	require.True(t, config.Global.DownloadCovers)
+	require.False(t, config.DryRun)
+
+	// Test gallery settings
+	require.True(t, config.Gallery.CreateWebGallery)
+
+	// Test provider settings
+	require.Equal(t, "test_gw2_path", config.Providers.GuildWars2.Path)
+	require.Equal(t, "test_minecraft_path", config.Providers.Minecraft.Path)
+	require.Equal(t, "test_steam_userdata", config.Providers.Steam.UserDataPath)
+	require.Equal(t, "test_steam_recordings", config.Providers.Steam.RecordingsPath)
+	require.True(t, config.Providers.Steam.Enabled, "Steam provider should be enabled by default")
+	require.Len(t, config.Providers.Steam.CustomGames, 1)
+	require.Equal(t, "Test Game", config.Providers.Steam.CustomGames["1234567890"])
+}
+
+func TestConfigSave(t *testing.T) {
+	// Create a test config
+	config := &Config{
+		OutputPath: "test_output",
+		DryRun:     false,
+		Gallery: GalleryConfig{
+			CreateWebGallery: true,
+		},
+		Providers: Providers{
+			GuildWars2: ProviderConfig{
+				Path: "test_gw2_path",
+			},
+			Steam: SteamConfig{
+				UserDataPath:   "test_steam_userdata",
+				RecordingsPath: "test_steam_recordings",
+				CustomGames: map[string]string{
+					"1234567890": "Test Game",
+				},
+			},
+		},
+	}
+
+	// Save to temporary file
+	tmpDir := t.TempDir()
+	testConfigPath := filepath.Join(tmpDir, "test_config.toml")
+
+	err := config.Save(testConfigPath)
+	require.NoError(t, err)
+
+	// Read back the saved file
+	savedData, err := os.ReadFile(testConfigPath)
+	require.NoError(t, err)
+
+	// Create a new config and load the saved data
+	newConfig := &Config{}
+	err = encoder.Decode(savedData, newConfig)
+	require.NoError(t, err)
+
+	// Compare the configs
+	require.Equal(t, config.OutputPath, newConfig.OutputPath)
+	require.Equal(t, config.Gallery.CreateWebGallery, newConfig.Gallery.CreateWebGallery)
+	require.Equal(t, config.Providers.GuildWars2.Path, newConfig.Providers.GuildWars2.Path)
+	require.Equal(t, config.Providers.Steam.UserDataPath, newConfig.Providers.Steam.UserDataPath)
+}
+
+func TestConfigInheritance(t *testing.T) {
+	// Create a test config with inheritance
+	testConfig := `
+output_path = "global_output"
+dry_run = false
+
+[global]
+download_covers = true
+
+[providers.guild_wars_2]
+path = "gw2_path"
+output_path = "gw2_output"
+download_covers = false
+
+[providers.minecraft]
+path = "minecraft_path"
+`
+
+	tmpDir := t.TempDir()
+	testConfigPath := filepath.Join(tmpDir, "test_config.toml")
+
+	err := os.WriteFile(testConfigPath, []byte(testConfig), 0644)
+	require.NoError(t, err)
+
+	// Load the config
+	config, err := NewConfig(testConfigPath)
+	require.NoError(t, err)
+
+	// Test inheritance in GuildWars2 config
+	require.Equal(t, "gw2_path", config.Providers.GuildWars2.Path)
+	require.False(t, config.Providers.GuildWars2.DownloadCovers)
+	require.False(t, config.DryRun)
+
+	// Test inheritance in Minecraft config (should inherit from global)
+	require.Equal(t, "minecraft_path", config.Providers.Minecraft.Path)
+	require.True(t, config.Global.DownloadCovers)
+}

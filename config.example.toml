@@ -1,0 +1,57 @@
+# This is an example config file for the games-screenshot-manager.
+
+# This option will run the program without actually downloading the files.
+dry_run = false
+
+# This option will specify the path to the output directory.
+output_path = "Output"
+
+# This section is used to configure the global settings for all providers.
+# You can override these settings for each provider in each `providers` section.
+[global]
+# This option will specify the path to the screenshots folder.
+path = "auto"
+
+# This option will download the covers for the games.
+download_covers = true
+
+# This section is used to configure the gallery settings.
+[gallery]
+# This option will create a web gallery.
+create_web_gallery = false
+
+#
+# Providers configuration
+#
+
+[providers.guild_wars_2]
+# This option will enable/disable the provider.
+enabled = false
+
+# This option will specify the path to the screenshots folder.
+# 'auto' will try to guess the path based on the platform. **Not all providers support this.**
+path = "auto"
+
+[providers.minecraft]
+path = "auto"
+
+[providers.playstation4]
+path = "auto"
+
+[providers.playstation5]
+path = "auto"
+
+[providers.steam]
+# This option will specify the path to the recordings folder.
+recordings_path = "auto"
+
+# This option will specify names to use for games that are not in the Steam store.
+# The key is the game ID and the value is the game name.
+[providers.steam.custom_games]
+"1234567890" = "Custom Game"
+
+[providers.world_of_warcraft]
+path = "auto"
+
+[providers.xbox_game_bar]
+path = "auto"
