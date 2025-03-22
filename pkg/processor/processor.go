@@ -85,7 +85,7 @@ func (p *Processor) processGame(game *models.Game) (err error) {
 	}
 
 	if p.options.DownloadCovers && !p.options.DryRun && game.CoverURL != "" {
-		destinationCoverPath := filepath.Join(destinationPath, ".cover")
+		destinationCoverPath := filepath.Join(destinationPath, "cover.jpg")
 		coverPath, err := helpers.DownloadURLIntoTempFile(game.CoverURL)
 		if err != nil {
 			p.logger.Errorf("Error donwloading cover for game %s from %s: %s", game.Name, game.Provider, err)
