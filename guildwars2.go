@@ -9,9 +9,8 @@ import (
 	"strings"
 	"time"
 
+	toolkitPaths "git.nakama.town/fmartingr/gotoolkit/paths"
 	"github.com/barasher/go-exiftool"
-	"github.com/fmartingr/games-screenshot-manager/internal/exif"
-	"github.com/fmartingr/games-screenshot-manager/pkg/helpers"
 )
 
 var _ Provider = (*GuildWars2Provider)(nil)
@@ -87,7 +86,7 @@ func (p *GuildWars2Provider) GetScreenshots() ([]*Game, error) {
 		fullPath := filepath.Join(path, file.Name())
 
 		if strings.Contains(file.Name(), gw2Extension) {
-			exifTags, err := exif.GetTags(et, fullPath)
+			exifTags, err := GetExifTagsWithTool(et, fullPath)
 			if err != nil {
 				p.log.Error("error retrieving exif tags", slog.Any("err", err), slog.String("file", fullPath))
 				continue
@@ -129,7 +128,7 @@ func (p *GuildWars2Provider) FindGames(options ProviderConfig) ([]Game, error) {
 // getScreenshotsPath returns the path where Guild Wars 2 screenshots are stored
 func (p *GuildWars2Provider) getScreenshotsPath() (string, error) {
 	if p.gw2Config.GetPath() != "" && p.gw2Config.GetPath() != "auto" {
-		return helpers.ExpandUser(p.gw2Config.GetPath()), nil
+		return toolkitPaths.ExpandUser(p.gw2Config.GetPath()), nil
 	}
 
 	if runtime.GOOS == "windows" {

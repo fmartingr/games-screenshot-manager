@@ -1,4 +1,4 @@
-package exif
+package gamesscreenshotmanager
 
 import (
 	"fmt"
@@ -7,13 +7,7 @@ import (
 	"github.com/barasher/go-exiftool"
 )
 
-func GetTags(et *exiftool.Exiftool, path string) (map[string]string, error) {
-	// et, err := exiftool.NewExiftool()
-	// if err != nil {
-	// 	return nil, fmt.Errorf("error intializing exiftool: %v\n", err)
-	// }
-	// defer et.Close()
-
+func GetExifTagsWithTool(et *exiftool.Exiftool, path string) (map[string]string, error) {
 	fileInfos := et.ExtractMetadata(path)
 
 	if len(fileInfos) == 0 {
@@ -39,7 +33,7 @@ func GetTags(et *exiftool.Exiftool, path string) (map[string]string, error) {
 	return result, nil
 }
 
-func GetTags2(path string) (map[string]string, error) {
+func GetExifTags(path string) (map[string]string, error) {
 	et, err := exiftool.NewExiftool()
 	if err != nil {
 		return nil, fmt.Errorf("error intializing exiftool: %v\n", err)

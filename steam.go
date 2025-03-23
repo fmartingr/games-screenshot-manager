@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -14,7 +16,7 @@ import (
 
 	toolkitCache "git.nakama.town/fmartingr/gotoolkit/cache"
 	toolkitModel "git.nakama.town/fmartingr/gotoolkit/model"
-	"github.com/fmartingr/games-screenshot-manager/pkg/helpers"
+	toolkitPaths "git.nakama.town/fmartingr/gotoolkit/paths"
 )
 
 var _ Provider = (*SteamProvider)(nil)
@@ -192,7 +194,17 @@ func (p *SteamProvider) downloadSteamAppList() error {
 	}
 
 	if download {
-		response, err := helpers.DoRequest("GET", steamAppListURL)
+		parsedURL, _ := url.Parse(steamAppListURL)
+		request := http.Request{
+			Method: "GET",
+			URL:    parsedURL,
+			Header: map[string][]string{
+				"User-Agent": {"github.com/fmartingr/games-screenshot-manager"},
+			},
+			ProtoMajor: 2,
+			ProtoMinor: 1,
+		}
+		response, err := http.DefaultClient.Do(&request)
 		if err != nil {
 			return fmt.Errorf("error making request for Steam APP List: %s", err)
 		}
@@ -232,9 +244,9 @@ func (p *SteamProvider) getSteamBasePath() (string, error) {
 	var path string
 	switch runtime.GOOS {
 	case "darwin":
-		path = helpers.ExpandUser("~/Library/Application Support/Steam")
+		path = toolkitPaths.ExpandUser("~/Library/Application Support/Steam")
 	case "linux":
-		path = helpers.ExpandUser("~/.local/share/Steam")
+		path = toolkitPaths.ExpandUser("~/.local/share/Steam")
 	case "windows":
 		path = "C:\\Program Files (x86)\\Steam"
 	default:

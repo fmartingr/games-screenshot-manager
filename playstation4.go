@@ -9,7 +9,6 @@ import (
 
 	toolkitPaths "git.nakama.town/fmartingr/gotoolkit/paths"
 	"github.com/barasher/go-exiftool"
-	"github.com/fmartingr/games-screenshot-manager/internal/exif"
 )
 
 var _ Provider = (*Playstation4Provider)(nil)
@@ -90,7 +89,7 @@ func (p *Playstation4Provider) GetScreenshots() ([]*Game, error) {
 
 				var destinationName string
 				if extension == ".jpg" {
-					exifTags, err := exif.GetTags(et, filePath)
+					exifTags, err := GetExifTagsWithTool(et, filePath)
 					if err != nil {
 						p.log.Error("Error getting EXIF tags", slog.String("file", filePath), slog.Any("error", err))
 						return nil
