@@ -30,19 +30,49 @@ func (r *ProviderRegistry) registerProvider(name string, provider Provider) {
 }
 
 func (r *ProviderRegistry) registerProviders() error {
-	steamProvider, err := NewSteamProvider(*r.config)
-	if err != nil {
-		return fmt.Errorf("failed to create steam provider: %w", err)
+	if r.config.Providers.Steam.Enabled {
+		steamProvider, err := NewSteamProvider(*r.config)
+		if err != nil {
+			return fmt.Errorf("failed to create steam provider: %w", err)
+		}
+
+		r.registerProvider("steam", steamProvider)
 	}
 
-	r.registerProvider("steam", steamProvider)
+	if r.config.Providers.GuildWars2.Enabled {
+		guildWars2Provider, err := NewGuildWars2Provider(*r.config)
+		if err != nil {
+			return fmt.Errorf("failed to create guild wars 2 provider: %w", err)
+		}
 
-	guildWars2Provider, err := NewGuildWars2Provider(*r.config)
-	if err != nil {
-		return fmt.Errorf("failed to create guild wars 2 provider: %w", err)
+		r.registerProvider("guild_wars_2", guildWars2Provider)
 	}
 
-	r.registerProvider("guild_wars_2", guildWars2Provider)
+	if r.config.Providers.WorldOfWarcraft.Enabled {
+		worldOfWarcraftProvider, err := NewWorldOfWarcraftProvider(*r.config)
+		if err != nil {
+			return fmt.Errorf("failed to create world of warcraft provider: %w", err)
+		}
 
+		r.registerProvider("world_of_warcraft", worldOfWarcraftProvider)
+	}
+
+	if r.config.Providers.Minecraft.Enabled {
+		minecraftProvider, err := NewMinecraftProvider(*r.config)
+		if err != nil {
+			return fmt.Errorf("failed to create minecraft provider: %w", err)
+		}
+
+		r.registerProvider("minecraft", minecraftProvider)
+	}
+
+	if r.config.Providers.PlayStation4.Enabled {
+		playstation4Provider, err := NewPlaystation4Provider(*r.config)
+		if err != nil {
+			return fmt.Errorf("failed to create playstation 4 provider: %w", err)
+		}
+
+		r.registerProvider("playstation4", playstation4Provider)
+	}
 	return nil
 }
