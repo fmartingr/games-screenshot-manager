@@ -18,10 +18,11 @@ var ErrCopyFileDestinationExists = errors.New("copy destination exists")
 
 type FileManager struct {
 	config Config
+	log    *slog.Logger
 }
 
 func NewFileManager(config Config) *FileManager {
-	return &FileManager{config: config}
+	return &FileManager{config: config, log: slog.Default().With("component", "file_manager")}
 }
 
 func (f *FileManager) ProcessGame(game *Game) error {
@@ -58,8 +59,12 @@ func (f *FileManager) GetPathForGame(game *Game) string {
 }
 
 func (f *FileManager) ProcessMedia(game *Game, media MediaFile) error {
-	// TODO: Put different media kinds in different folders?
+	f.log.Debug("Processing media", slog.String("path", media.GetPath()), slog.String("destination_name", media.GetDestinationName()))
+
 	destinationPath := f.GetPathForGame(game)
+	if media.GetKind() == MediaKindRecording {
+		destinationPath = filepath.Join(destinationPath, "recordings")
+	}
 
 	// Check if folder exists (create otherwise)
 	if _, err := os.Stat(destinationPath); os.IsNotExist(err) && !f.config.DryRun {
