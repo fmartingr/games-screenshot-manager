@@ -6,6 +6,12 @@ import (
 	"git.nakama.town/fmartingr/gotoolkit/encoding"
 )
 
+var encoder = encoding.NewTOMLEncoding()
+
+func Ptr[T any](v T) *T {
+	return &v
+}
+
 // Config represents the root configuration structure
 type Config struct {
 	OutputPath string        `toml:"output_path"`
@@ -17,10 +23,8 @@ type Config struct {
 
 func (c *Config) Defaults() {
 	c.OutputPath = "Output"
-
 	c.Global.Defaults()
 	c.Gallery.Defaults()
-	c.Providers.Defaults()
 }
 
 // Providers represents all game provider configurations
@@ -34,23 +38,15 @@ type Providers struct {
 	XboxGameBar     ProviderConfig `toml:"xbox_game_bar"`
 }
 
-func (c *Providers) Defaults() {
-	c.GuildWars2.Defaults()
-	c.Minecraft.Defaults()
-	c.PlayStation4.Defaults()
-	c.PlayStation5.Defaults()
-	c.Steam.Defaults()
-	c.WorldOfWarcraft.Defaults()
-	c.XboxGameBar.Defaults()
-}
-
 // GlobalConfig represents the global configuration settings
 type GlobalConfig struct {
+	Enabled        bool `toml:"enabled"`
 	DownloadCovers bool `toml:"download_covers"`
 }
 
 func (c *GlobalConfig) Defaults() {
 	c.DownloadCovers = false
+	c.Enabled = true
 }
 
 // GalleryConfig represents the web gallery configuration
@@ -62,16 +58,35 @@ func (c *GalleryConfig) Defaults() {
 	c.CreateWebGallery = false
 }
 
-// ProviderConfig represents the base configuration for most games
+// ProviderConfig represents the configuration for a specific provider
 type ProviderConfig struct {
-	GlobalConfig
-	Enabled bool   `toml:"enabled,default=true"`
-	Path    string `toml:"path"`
+	Enabled        *bool   `toml:"enabled"`
+	DownloadCovers *bool   `toml:"download_covers"`
+	Path           *string `toml:"path"`
 }
 
-func (c *ProviderConfig) Defaults() {
-	c.Path = "auto"
-	c.Enabled = true
+func (c *ProviderConfig) IsEnabled() bool {
+	return c.Enabled != nil && *c.Enabled
+}
+
+func (c *ProviderConfig) GetPath() string {
+	if c.Path != nil {
+		return *c.Path
+	}
+	return "auto"
+}
+
+// Merge merges the provider config with the global config and defaults
+func (pc *ProviderConfig) Merge(global *GlobalConfig) {
+	// Merge Enabled field
+	if pc.Enabled == nil {
+		pc.Enabled = &global.Enabled
+	}
+
+	// Merge DownloadCovers field
+	if pc.DownloadCovers == nil {
+		pc.DownloadCovers = &global.DownloadCovers
+	}
 }
 
 // SteamConfig represents the Steam-specific configuration
@@ -84,13 +99,21 @@ type SteamConfig struct {
 	CustomGames       map[string]string `toml:"custom_games"`
 }
 
-func (c *SteamConfig) Defaults() {
-	c.Enabled = true
-	c.UserDataPath = "auto"
-	c.RecordingsPath = "auto"
+func (c *SteamConfig) GetPath() string {
+	return c.GetUserDataPath()
 }
 
-var encoder = encoding.NewTOMLEncoding()
+func (c *SteamConfig) GetUserDataPath() string {
+	return c.UserDataPath
+}
+
+func (c *SteamConfig) ShouldProcessClips() bool {
+	return c.ProcessClips
+}
+
+func (c *SteamConfig) ShouldProcessRecordings() bool {
+	return c.ProcessRecordings
+}
 
 // NewConfig creates a new Config instance from a TOML file
 func NewConfig(path string) (*Config, error) {
@@ -105,6 +128,15 @@ func NewConfig(path string) (*Config, error) {
 	if err := encoder.Decode(data, config); err != nil {
 		return nil, err
 	}
+
+	// Merge the global config with the provider configs
+	config.Providers.Steam.Merge(&config.Global)
+	config.Providers.Minecraft.Merge(&config.Global)
+	config.Providers.PlayStation4.Merge(&config.Global)
+	config.Providers.PlayStation5.Merge(&config.Global)
+	config.Providers.WorldOfWarcraft.Merge(&config.Global)
+	config.Providers.XboxGameBar.Merge(&config.Global)
+	config.Providers.GuildWars2.Merge(&config.Global)
 
 	return config, nil
 }

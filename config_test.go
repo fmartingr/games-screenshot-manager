@@ -50,11 +50,11 @@ custom_games = { "1234567890" = "Test Game" }
 	require.True(t, config.Gallery.CreateWebGallery)
 
 	// Test provider settings
-	require.Equal(t, "test_gw2_path", config.Providers.GuildWars2.Path)
-	require.Equal(t, "test_minecraft_path", config.Providers.Minecraft.Path)
-	require.Equal(t, "test_steam_userdata", config.Providers.Steam.UserDataPath)
+	require.Equal(t, "test_gw2_path", config.Providers.GuildWars2.GetPath())
+	require.Equal(t, "test_minecraft_path", config.Providers.Minecraft.GetPath())
+	require.Equal(t, "test_steam_userdata", config.Providers.Steam.GetPath())
 	require.Equal(t, "test_steam_recordings", config.Providers.Steam.RecordingsPath)
-	require.True(t, config.Providers.Steam.Enabled, "Steam provider should be enabled by default")
+	require.True(t, config.Providers.Steam.IsEnabled(), "Steam provider should be enabled by default")
 	require.Len(t, config.Providers.Steam.CustomGames, 1)
 	require.Equal(t, "Test Game", config.Providers.Steam.CustomGames["1234567890"])
 }
@@ -69,7 +69,7 @@ func TestConfigSave(t *testing.T) {
 		},
 		Providers: Providers{
 			GuildWars2: ProviderConfig{
-				Path: "test_gw2_path",
+				Path: &[]string{"test_gw2_path"}[0],
 			},
 			Steam: SteamConfig{
 				UserDataPath:   "test_steam_userdata",
@@ -100,8 +100,8 @@ func TestConfigSave(t *testing.T) {
 	// Compare the configs
 	require.Equal(t, config.OutputPath, newConfig.OutputPath)
 	require.Equal(t, config.Gallery.CreateWebGallery, newConfig.Gallery.CreateWebGallery)
-	require.Equal(t, config.Providers.GuildWars2.Path, newConfig.Providers.GuildWars2.Path)
-	require.Equal(t, config.Providers.Steam.UserDataPath, newConfig.Providers.Steam.UserDataPath)
+	require.Equal(t, config.Providers.GuildWars2.GetPath(), newConfig.Providers.GuildWars2.GetPath())
+	require.Equal(t, config.Providers.Steam.GetPath(), newConfig.Providers.Steam.GetPath())
 }
 
 func TestConfigInheritance(t *testing.T) {
@@ -114,6 +114,7 @@ dry_run = false
 download_covers = true
 
 [providers.guild_wars_2]
+enabled = false
 path = "gw2_path"
 output_path = "gw2_output"
 download_covers = false
@@ -133,11 +134,30 @@ path = "minecraft_path"
 	require.NoError(t, err)
 
 	// Test inheritance in GuildWars2 config
-	require.Equal(t, "gw2_path", config.Providers.GuildWars2.Path)
-	require.False(t, config.Providers.GuildWars2.DownloadCovers)
+	require.Equal(t, "gw2_path", config.Providers.GuildWars2.GetPath())
+	require.False(t, config.Providers.GuildWars2.IsEnabled())
 	require.False(t, config.DryRun)
 
 	// Test inheritance in Minecraft config (should inherit from global)
-	require.Equal(t, "minecraft_path", config.Providers.Minecraft.Path)
+	require.Equal(t, "minecraft_path", config.Providers.Minecraft.GetPath())
 	require.True(t, config.Global.DownloadCovers)
+}
+
+func TestConfigMerge(t *testing.T) {
+	config := &Config{
+		Global: GlobalConfig{
+			DownloadCovers: true,
+		},
+		Providers: Providers{
+			GuildWars2: ProviderConfig{
+				Enabled: Ptr(false),
+				Path:    Ptr("gw2_path"),
+			},
+		},
+	}
+
+	config.Providers.GuildWars2.Merge(&config.Global)
+
+	require.False(t, config.Providers.GuildWars2.IsEnabled())
+	require.True(t, *config.Providers.GuildWars2.DownloadCovers)
 }
