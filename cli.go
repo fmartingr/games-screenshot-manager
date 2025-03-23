@@ -42,11 +42,3 @@ func RunCLI() error {
 
 	return nil
 }
-
-// main is the entry point of the application
-func main() {
-	if err := RunCLI(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-		os.Exit(1)
-	}
-}

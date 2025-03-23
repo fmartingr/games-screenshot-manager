@@ -37,5 +37,12 @@ func (r *ProviderRegistry) registerProviders() error {
 
 	r.registerProvider("steam", steamProvider)
 
+	guildWars2Provider, err := NewGuildWars2Provider(*r.config)
+	if err != nil {
+		return fmt.Errorf("failed to create guild wars 2 provider: %w", err)
+	}
+
+	r.registerProvider("guild_wars_2", guildWars2Provider)
+
 	return nil
 }
