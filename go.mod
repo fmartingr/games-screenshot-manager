@@ -3,11 +3,11 @@ module github.com/fmartingr/games-screenshot-manager
 go 1.24.1
 
 require (
-	git.nakama.town/fmartingr/gotoolkit v0.1.0
+	git.nakama.town/fmartingr/gotoolkit v0.2.0
 	github.com/barasher/go-exiftool v1.10.0
 	github.com/gosimple/slug v1.15.0
 	github.com/lmittmann/tint v1.0.7
-	github.com/stretchr/testify v1.9.0
+	github.com/stretchr/testify v1.10.0
 )
 
 require (
@@ -17,5 +17,3 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
-
-replace git.nakama.town/fmartingr/gotoolkit => ../gotoolkit

@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	toolkitCache "git.nakama.town/fmartingr/gotoolkit/cache"
+	"git.nakama.town/fmartingr/gotoolkit/cache"
 	toolkitModel "git.nakama.town/fmartingr/gotoolkit/model"
 	toolkitPaths "git.nakama.town/fmartingr/gotoolkit/paths"
 )
@@ -59,11 +59,16 @@ type SteamProvider struct {
 }
 
 func NewSteamProvider(config Config) (*SteamProvider, error) {
+	steamCache, err := cache.NewFileCache("games-screenshot-manager")
+	if err != nil {
+		return nil, fmt.Errorf("error creating file cache: %s", err)
+	}
+
 	steamProvider := &SteamProvider{
 		config:      config,
 		steamConfig: config.Providers.Steam,
 		log:         slog.Default().With("provider", "steam"),
-		cache:       toolkitCache.NewMemoryCache(), // TODO: Use a file based cache
+		cache:       steamCache,
 	}
 
 	if err := steamProvider.downloadSteamAppList(); err != nil {
@@ -177,13 +182,12 @@ func (p *SteamProvider) FindGames(options SteamConfig) ([]Game, error) {
 // It's used to get the JSON response with all the games so we can match the game ID (folder name)
 // with the game name (from the JSON response)
 func (p *SteamProvider) downloadSteamAppList() error {
-	p.log.Info("Downloading Steam APP List, used to get all game IDs and Names")
 
 	cacheKey := "steam-applist"
 	download := true
 	var payload []byte
 
-	result, err := p.cache.GetWithExpiry(cacheKey, 24*time.Hour)
+	result, err := p.cache.Get(cacheKey)
 	if err != nil && !errors.Is(err, toolkitModel.ErrCacheKeyDontExist) {
 		return fmt.Errorf("error retrieving cache: %s", err)
 	}
@@ -194,6 +198,7 @@ func (p *SteamProvider) downloadSteamAppList() error {
 	}
 
 	if download {
+		p.log.Info("Downloading Steam APP List, used to get all game IDs and Names")
 		parsedURL, _ := url.Parse(steamAppListURL)
 		request := http.Request{
 			Method: "GET",
@@ -218,7 +223,7 @@ func (p *SteamProvider) downloadSteamAppList() error {
 			return fmt.Errorf("error reading steam response: %s", err)
 		}
 
-		if err := p.cache.Set(cacheKey, payload); err != nil {
+		if err := p.cache.Set(cacheKey, payload, cache.WithTTL(24*time.Hour)); err != nil {
 			return fmt.Errorf("error caching steam app list: %s", err)
 		}
 	}
