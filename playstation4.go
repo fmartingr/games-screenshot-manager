@@ -45,7 +45,7 @@ func NewPlaystation4Provider(config Config) (*Playstation4Provider, error) {
 }
 
 func (p *Playstation4Provider) Run() error {
-	if !p.ps4Config.Enabled {
+	if !p.ps4Config.IsEnabled() {
 		p.log.Warn("PlayStation 4 provider is not enabled")
 		return nil
 	}
@@ -120,9 +120,8 @@ func (p *Playstation4Provider) GetScreenshots() ([]*Game, error) {
 
 				media.DestinationName = destinationName + extension
 
-				game := NewGame(ps4ID, ps4Name, ps4PlatformName, gameName)
+				game := p.gameManager.AddGame(NewGame(gameName, gameName, ps4PlatformName, ps4ID))
 				game.AddScreenshot(media)
-				p.gameManager.AddGame(game)
 			}
 
 			return nil
@@ -130,6 +129,13 @@ func (p *Playstation4Provider) GetScreenshots() ([]*Game, error) {
 
 	if err != nil {
 		return nil, fmt.Errorf("error walking directory: %w", err)
+	}
+
+	for _, game := range p.gameManager.GetGames() {
+		if err := p.fileManager.ProcessGame(game); err != nil {
+			p.log.Error("Error processing game", slog.Any("error", err))
+			continue
+		}
 	}
 
 	return p.gameManager.GetGames(), nil
@@ -149,8 +155,8 @@ func (p *Playstation4Provider) FindGames(options ProviderConfig) ([]Game, error)
 
 // getScreenshotsPath returns the path where PlayStation 4 screenshots are stored
 func (p *Playstation4Provider) getScreenshotsPath() (string, error) {
-	if p.ps4Config.Path != "" && p.ps4Config.Path != "auto" {
-		return toolkitPaths.ExpandUser(p.ps4Config.Path), nil
+	if p.ps4Config.GetPath() != "" && p.ps4Config.GetPath() != "auto" {
+		return toolkitPaths.ExpandUser(p.ps4Config.GetPath()), nil
 	}
 
 	return "", fmt.Errorf("path to PlayStation 4 screenshots folder must be provided")

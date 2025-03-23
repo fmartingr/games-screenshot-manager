@@ -42,7 +42,7 @@ func NewMinecraftProvider(config Config) (*MinecraftProvider, error) {
 }
 
 func (p *MinecraftProvider) Run() error {
-	if !p.mcConfig.Enabled {
+	if !p.mcConfig.IsEnabled() {
 		p.log.Warn("Minecraft provider is not enabled")
 		return nil
 	}
@@ -84,8 +84,9 @@ func (p *MinecraftProvider) GetScreenshots() ([]*Game, error) {
 
 	games := p.gameManager.GetGames()
 	for _, game := range games {
-		for _, media := range game.Screenshots {
-			p.log.Info("Processing screenshot", slog.String("screenshot_path", media.Path))
+		if err := p.fileManager.ProcessGame(game); err != nil {
+			p.log.Error("Error processing game", slog.Any("error", err))
+			continue
 		}
 	}
 
@@ -106,8 +107,8 @@ func (p *MinecraftProvider) FindGames(options ProviderConfig) ([]Game, error) {
 
 // getScreenshotsPaths returns the paths where Minecraft screenshots are stored
 func (p *MinecraftProvider) getScreenshotsPaths() ([]string, error) {
-	if p.mcConfig.Path != "" && p.mcConfig.Path != "auto" {
-		return []string{toolkitPaths.ExpandUser(p.mcConfig.Path)}, nil
+	if p.mcConfig.GetPath() != "" && p.mcConfig.GetPath() != "auto" {
+		return []string{toolkitPaths.ExpandUser(p.mcConfig.GetPath())}, nil
 	}
 
 	var paths []string

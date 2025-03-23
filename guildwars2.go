@@ -47,7 +47,7 @@ func NewGuildWars2Provider(config Config) (*GuildWars2Provider, error) {
 }
 
 func (p *GuildWars2Provider) Run() error {
-	if !p.gw2Config.Enabled {
+	if !p.gw2Config.IsEnabled() {
 		p.log.Warn("Guild Wars 2 provider is not enabled")
 		return nil
 	}
@@ -106,7 +106,11 @@ func (p *GuildWars2Provider) GetScreenshots() ([]*Game, error) {
 		}
 	}
 
-	p.gameManager.AddGame(game)
+	if err := p.fileManager.ProcessGame(game); err != nil {
+		p.log.Error("Error processing game", slog.Any("error", err))
+		return nil, fmt.Errorf("error processing game: %w", err)
+	}
+
 	return p.gameManager.GetGames(), nil
 }
 
@@ -124,8 +128,8 @@ func (p *GuildWars2Provider) FindGames(options ProviderConfig) ([]Game, error) {
 
 // getScreenshotsPath returns the path where Guild Wars 2 screenshots are stored
 func (p *GuildWars2Provider) getScreenshotsPath() (string, error) {
-	if p.gw2Config.Path != "" && p.gw2Config.Path != "auto" {
-		return helpers.ExpandUser(p.gw2Config.Path), nil
+	if p.gw2Config.GetPath() != "" && p.gw2Config.GetPath() != "auto" {
+		return helpers.ExpandUser(p.gw2Config.GetPath()), nil
 	}
 
 	if runtime.GOOS == "windows" {

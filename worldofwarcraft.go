@@ -45,7 +45,7 @@ func NewWorldOfWarcraftProvider(config Config) (*WorldOfWarcraftProvider, error)
 }
 
 func (p *WorldOfWarcraftProvider) Run() error {
-	if !p.wowConfig.Enabled {
+	if !p.wowConfig.IsEnabled() {
 		p.log.Warn("World of Warcraft provider is not enabled")
 		return nil
 	}
@@ -99,16 +99,12 @@ func (p *WorldOfWarcraftProvider) GetScreenshots() ([]*Game, error) {
 		}
 	}
 
-	p.gameManager.AddGame(game)
-
-	games := p.gameManager.GetGames()
-	for _, game := range games {
-		for _, media := range game.Screenshots {
-			p.log.Info("Processing screenshot", slog.String("screenshot_path", media.Path))
-		}
+	if err := p.fileManager.ProcessGame(game); err != nil {
+		p.log.Error("Error processing game", slog.Any("error", err))
+		return nil, fmt.Errorf("error processing game: %w", err)
 	}
 
-	return games, nil
+	return p.gameManager.GetGames(), nil
 }
 
 func (p *WorldOfWarcraftProvider) GetRecordings() ([]Game, error) {
@@ -125,8 +121,8 @@ func (p *WorldOfWarcraftProvider) FindGames(options ProviderConfig) ([]Game, err
 
 // getScreenshotsPath returns the path where World of Warcraft screenshots are stored
 func (p *WorldOfWarcraftProvider) getScreenshotsPath() (string, error) {
-	if p.wowConfig.Path != "" && p.wowConfig.Path != "auto" {
-		return toolkitPaths.ExpandUser(p.wowConfig.Path), nil
+	if p.wowConfig.GetPath() != "" && p.wowConfig.GetPath() != "auto" {
+		return toolkitPaths.ExpandUser(p.wowConfig.GetPath()), nil
 	}
 
 	switch runtime.GOOS {

@@ -75,7 +75,7 @@ func NewSteamProvider(config Config) (*SteamProvider, error) {
 }
 
 func (p *SteamProvider) Run() error {
-	if !p.steamConfig.Enabled {
+	if !p.steamConfig.IsEnabled() {
 		p.log.Warn("Steam provider is not enabled")
 		return nil
 	}
@@ -84,13 +84,13 @@ func (p *SteamProvider) Run() error {
 		p.log.Error("Failed to get screenshots", slog.Any("error", err))
 	}
 
-	if p.steamConfig.ProcessClips {
+	if p.steamConfig.ShouldProcessClips() {
 		if _, err := p.GetClips(); err != nil {
 			p.log.Error("Failed to get clips", slog.Any("error", err))
 		}
 	}
 
-	if p.steamConfig.ProcessRecordings {
+	if p.steamConfig.ShouldProcessRecordings() {
 		if _, err := p.GetRecordings(); err != nil {
 			p.log.Error("Failed to get recordings", slog.Any("error", err))
 		}
@@ -150,8 +150,9 @@ func (p *SteamProvider) GetScreenshots() ([]*Game, error) {
 
 	games := p.gameManager.GetGames()
 	for _, game := range games {
-		for _, media := range game.Screenshots {
-			p.log.Info("Processing screenshot", slog.String("screenshot_path", media.Path))
+		if err := p.fileManager.ProcessGame(game); err != nil {
+			p.log.Error("Error processing game", slog.Any("error", err))
+			continue
 		}
 	}
 

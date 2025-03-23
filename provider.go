@@ -48,7 +48,12 @@ func (m *Media) GetDestinationName() string {
 	return fileStat.ModTime().Format(DatetimeFormat) + filepath.Ext(m.Path)
 }
 
+func (m *Media) GetKind() MediaKind {
+	return m.Kind
+}
+
 type MediaFile interface {
 	GetPath() string
 	GetDestinationName() string
+	GetKind() MediaKind
 }
