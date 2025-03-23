@@ -3,6 +3,7 @@ package gamesscreenshotmanager
 import (
 	"fmt"
 	"log/slog"
+	"runtime"
 )
 
 type ProviderRegistry struct {
@@ -74,5 +75,25 @@ func (r *ProviderRegistry) registerProviders() error {
 
 		r.registerProvider("playstation4", playstation4Provider)
 	}
+
+	if r.config.Providers.PlayStation5.IsEnabled() {
+		playstation5Provider, err := NewPlaystation5Provider(*r.config)
+		if err != nil {
+			return fmt.Errorf("failed to create playstation 5 provider: %w", err)
+		}
+
+		r.registerProvider("playstation5", playstation5Provider)
+	}
+
+	// Xbox Game Bar is only available on Windows
+	if r.config.Providers.XboxGameBar.IsEnabled() && runtime.GOOS == "windows" {
+		xboxGameBarProvider, err := NewXboxGameBarProvider(*r.config)
+		if err != nil {
+			return fmt.Errorf("failed to create xbox game bar provider: %w", err)
+		}
+
+		r.registerProvider("xbox_game_bar", xboxGameBarProvider)
+	}
+
 	return nil
 }
