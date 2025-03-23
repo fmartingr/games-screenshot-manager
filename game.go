@@ -45,8 +45,12 @@ func NewGameManager() *GameManager {
 	}
 }
 
-func (gm *GameManager) AddGame(game *Game) {
-	gm.games[game.ID] = game
+func (gm *GameManager) AddGame(game *Game) *Game {
+	if _, ok := gm.games[game.ID]; !ok {
+		gm.games[game.ID] = game
+	}
+
+	return gm.games[game.ID]
 }
 
 func (gm *GameManager) GetGame(id string) *Game {
