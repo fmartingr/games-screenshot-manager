@@ -23,7 +23,7 @@ var _ Provider = (*SteamProvider)(nil)
 
 const (
 	steamAppListURL    = "https://api.steampowered.com/ISteamApps/GetAppList/v2/"
-	steamGameHeaderURL = "https://cdn.cloudflare.steamstatic.com/steam/apps/%d/header.jpg"
+	steamGameHeaderURL = "https://cdn.cloudflare.steamstatic.com/steam/apps/%s/header.jpg"
 )
 
 type SteamApp struct {
@@ -103,6 +103,12 @@ func (p *SteamProvider) Run() error {
 		}
 	}
 
+	if p.steamConfig.ShouldDownloadCovers() {
+		if err := p.GetCovers(); err != nil {
+			p.log.Error("Failed to get covers", slog.Any("error", err))
+		}
+	}
+
 	return nil
 }
 
@@ -172,6 +178,33 @@ func (p *SteamProvider) GetRecordings() ([]Game, error) {
 
 func (p *SteamProvider) GetClips() ([]Game, error) {
 	return nil, fmt.Errorf("GetClips not implemented")
+}
+
+func (p *SteamProvider) GetCovers() error {
+	for _, game := range p.gameManager.GetGames() {
+		// Check if cover.jpg exists in destination path
+		coverPath := filepath.Join(p.fileManager.GetPathForGame(game), "cover.jpg")
+		if p.fileManager.FileExists(coverPath) {
+			continue
+		}
+
+		// Download cover
+		coverURL := fmt.Sprintf(steamGameHeaderURL, game.ID)
+		coverData, err := http.Get(coverURL)
+		if err != nil {
+			return fmt.Errorf("error downloading cover: %s", err)
+		}
+
+		if coverData.Body != nil {
+			defer coverData.Body.Close()
+		}
+
+		if err := p.fileManager.WriteFile(coverPath, coverData.Body); err != nil {
+			return fmt.Errorf("error writing cover file: %s", err)
+		}
+	}
+
+	return nil
 }
 
 func (p *SteamProvider) FindGames(options SteamConfig) ([]Game, error) {
