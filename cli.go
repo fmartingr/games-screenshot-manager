@@ -21,7 +21,7 @@ var levelMap = map[string]slog.Level{
 // RunCLI starts the command line interface
 func RunCLI() error {
 	var configPath string
-	flag.StringVar(&configPath, "config", "config.toml", "Path to the configuration file")
+	flag.StringVar(&configPath, "config", "", "Path to the configuration file")
 	logLevel := flag.String("log", "info", "Log level")
 	flag.Parse()
 
@@ -59,6 +59,10 @@ func RunCLI() error {
 		return fmt.Errorf("failed to create provider registry: %w", err)
 	}
 
+	if config.DryRun {
+		slog.Info("dry run is enabled, no changes will be made to the files in the system")
+	}
+
 	for _, provider := range registry.Providers {
 		if err := provider.Run(); err != nil {
 			return fmt.Errorf("failed to run provider: %w", err)
@@ -87,5 +91,7 @@ func RunCLI() error {
 			}
 		}
 	}
+
+	slog.Info("done")
 	return nil
 }
