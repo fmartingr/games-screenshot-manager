@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/lmittmann/tint"
@@ -19,10 +20,19 @@ var levelMap = map[string]slog.Level{
 
 // RunCLI starts the command line interface
 func RunCLI() error {
-	// Define flags
-	configPath := flag.String("config", "config.toml", "Path to the configuration file")
+	var configPath string
+	flag.StringVar(&configPath, "config", "config.toml", "Path to the configuration file")
 	logLevel := flag.String("log", "info", "Log level")
 	flag.Parse()
+
+	if configPath == "" {
+		userConfigDir, err := os.UserConfigDir()
+		if err != nil {
+			return fmt.Errorf("failed to get user config directory: %w", err)
+		}
+
+		configPath = filepath.Join(userConfigDir, "games-screenshot-manager", "config.toml")
+	}
 
 	if _, ok := levelMap[*logLevel]; !ok {
 		return fmt.Errorf("invalid log level: %s", *logLevel)
@@ -36,7 +46,7 @@ func RunCLI() error {
 	))
 
 	// Load configuration
-	config, err := NewConfig(*configPath)
+	config, err := NewConfig(configPath)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
