@@ -1,9 +1,13 @@
 package main
 
 import (
-	"github.com/fmartingr/games-screenshot-manager/internal/cli"
+	"log/slog"
+
+	gamesscreenshotmanager "github.com/fmartingr/games-screenshot-manager"
 )
 
 func main() {
-	cli.Start()
+	if err := gamesscreenshotmanager.RunCLI(); err != nil {
+		slog.Error("Error", slog.Any("error", err))
+	}
 }

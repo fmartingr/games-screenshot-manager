@@ -4,61 +4,48 @@
 
 A simple tool to collect and sort games screenshots from different platforms.
 
-## Supported providers
-
-Use the appropriate ID with the `-provider` flag. [See examples below](#Usage)
-
-| Name              | ID              | Linux | Windows | macOS | Covers | Notes                                                                |
-| ----------------- | --------------- | ----- | ------- | ----- | ------ | -------------------------------------------------------------------- |
-| Guild Wars 2      | `gw2`           | No    | Yes     | No    | No     | Works on unsupported platforms with `-input-path` pointing to folder |
-| Minecraft         | `minecraft`     | Yes   | Yes     | Yes   | No     |
-| PlayStation 4     | `playstation-4` | -     | -       | -     | No     | Requires `-input-path` pointing to PS4 folder                        |
-| RetroArch         | `retroarch`     | -     | -       | -     | Yes    | Requires `-input-path` pointing to Playlists folder                  |
-| Steam             | `steam`         | Yes   | Yes     | Yes   | Yes    |
-| World of Wardraft | `wow`           | No    | Yes     | Yes   | No     | Works on unsupported platforms with `-input-path` pointing to folder |
-| Xbox Game Bar     | `xbox-game-bar` | -     | -       | -     | No     | Requires `-input-path` pointing to the folder holding the captures   |
-
-## Requirements
-
-- [exiftool](https://exiftool.org/) to parse EXIF data from files. (Using [baransher/go-exiftool library](https://github.com/barasher/go-exiftool))
-
-## How it works
-
-Each provider has it's own way of finding the screenshots, but ideally the screenshots folder for games are known to us users so we only need to traverse them and find image files except for installations that may vary (like Retroarch) or systems outside of the PC ecosystem (Playstation).
-
-In some cases to have all the information for a particular provider we need to retrieve more data from the internet, for example the Steam game list to associate names to the IDs ~~or in Nintendo Switch's case a community provided list to associate the internal ID with the Game's name~~.
-
-For more details, you can check out [the source code for all providers](https://github.com/fmartingr/games-screenshot-manager/tree/master/pkg/providers)
-
-Optionally a cover image for a game can be downloaded and placed under a `.cover` file in the game path. For this to work use the `-download-cover` flag. Check above for provider support for this feature.
-
-## Nintendo Switch notice
-
-This project initially started as a Nintendo Switch helper to import and properly organize screenshots, but Nintendo improved this over the years and now we can use Android File Transfer to easily get the screenshots from a Nintendo Switch with the proper game name as folder name. For more information [read this issue](https://github.com/RenanGreca/Switch-Screenshots/issues/46)
-
 ## Installation
 
 ```
-go get -u github.com/fmartingr/games-screenshot-manager
+go install github.com/fmartingr/games-screenshot-manager@latest
 ```
 
 Or get the latest binary build from the [releases page](https://github.com/fmartingr/games-screenshot-manager/releases)
 
 ## Usage
 
+Create a configuration file following the [example config](./config.example.toml).
+
+Run the binary or the installed command:
+
 ```
-# Help
-games-screenshot-manager -h
-
-# Fetch and sort all Steam screenshots into ./Output
-games-screenshot-manager -provider steam -output-path ./Output
-
-# Like the one above but it'll download all header images for the games
-games-screenshot-manager -provider steam -output-path ./Output -download-covers
-
-# Perform a dry run (see what's gonna get copied where)
-games-screenshot-manager -provider steam -dry-run
-
-# Parse all Nintendo Switch screenshots
-games-screenshot-manager -provider nintendo-switch -input-path ./Album
+games-screenshot-manager -config ./config.toml
 ```
+
+If no `-config` flag is provided, the binary will look for a `config.toml` file in the user configuration directory, which varies by system:
+
+- Linux: `$XDG_CONFIG_HOME/games-screenshot-manager/config.toml`
+- Windows: `%APPDATA%\games-screenshot-manager\config.toml`
+- macOS: `~/Library/Application Support/games-screenshot-manager/config.toml`
+
+## Supported providers
+
+| Name              | Linux | Windows | macOS | Screenshots | Clips | Recordings | Covers | Notes                                                                                                                  |
+| ----------------- | ----- | ------- | ----- | ----------- | ----- | ---------- | ------ | ---------------------------------------------------------------------------------------------------------------------- |
+| Guild Wars 2      | No    | Yes     | No    | Yes         | -     | --         | No     | Works on unsupported platforms with `path` pointing to screenshots folder                                              |
+| Minecraft         | Yes   | Yes     | Yes   | Yes         | -     | --         | No     |                                                                                                                        |
+| PlayStation 4     | -     | -       | -     | Yes         | Yes   | --         | No     | Requires `path` pointing to PS4 folder                                                                                 |
+| PlayStation 5     | -     | -       | -     | Yes         | Yes   | --         | No     | Requires `path` pointing to PS5 folder                                                                                 |
+| Steam             | Yes   | Yes     | Yes   | Yes         | No    | No         | No     | Also supports downloading screenshots uploaded to Steam by specifying `steam_user_id` and `api_key` in the config file |
+| World of Wardraft | No    | Yes     | Yes   | Yes         | Yes   | --         | No     | Works on unsupported platforms with `path` pointing to screenshots folder                                              |
+| Xbox Game Bar     | -     | Yes     | -     | Yes         | No    | No         | No     | Requires `path` pointing to the folder holding the captures                                                            |
+
+## Requirements
+
+- [exiftool](https://exiftool.org/) to parse EXIF data from files. (Using [baransher/go-exiftool library](https://github.com/barasher/go-exiftool)) This is required for the **PlayStation 4**, **Guild Wars 2** and **Xbox Game Bar** providers.
+
+## What about Nintendo Switch?
+
+This project initially started as a Nintendo Switch helper to import and properly organize Switch screenshots since their system was a mess, but Nintendo improved this over the years and now we can use Android File Transfer to easily get the screenshots from a Nintendo Switch with the proper game name as folder name and the screenshots sorted by date.
+
+For more information about this, [read this issue](https://github.com/RenanGreca/Switch-Screenshots/issues/46)
