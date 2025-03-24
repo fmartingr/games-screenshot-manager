@@ -9,6 +9,7 @@ type Game struct {
 	Screenshots []*Media
 	Clips       []*Media
 	Recordings  []*Media
+	Cover       *Media
 }
 
 func NewGame(id, name, platform, provider string) *Game {
@@ -33,6 +34,10 @@ func (g *Game) AddClip(clip *Media) {
 
 func (g *Game) AddRecording(recording *Media) {
 	g.Recordings = append(g.Recordings, recording)
+}
+
+func (g *Game) SetCover(cover *Media) {
+	g.Cover = cover
 }
 
 type GameManager struct {

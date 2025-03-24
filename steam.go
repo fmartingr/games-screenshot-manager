@@ -1,82 +1,48 @@
 package gamesscreenshotmanager
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"log/slog"
-	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
-	"git.nakama.town/fmartingr/gotoolkit/cache"
-	toolkitModel "git.nakama.town/fmartingr/gotoolkit/model"
 	toolkitPaths "git.nakama.town/fmartingr/gotoolkit/paths"
 )
 
 var _ Provider = (*SteamProvider)(nil)
 
-const (
-	steamAppListURL    = "https://api.steampowered.com/ISteamApps/GetAppList/v2/"
-	steamGameHeaderURL = "https://cdn.cloudflare.steamstatic.com/steam/apps/%s/header.jpg"
-)
-
-type SteamApp struct {
-	AppID uint64 `json:"appid"`
-	Name  string `json:"name"`
-}
-
-type SteamAppList struct {
-	Apps []SteamApp `json:"apps"`
-}
-
-func (s *SteamAppList) GetGameName(gameID string) string {
-	for _, app := range s.Apps {
-		if fmt.Sprintf("%d", app.AppID) == gameID {
-			return app.Name
-		}
-	}
-	return ""
-}
-
-type SteamAppListResponse struct {
-	AppList SteamAppList `json:"applist"`
-}
-
 type SteamProvider struct {
 	config      Config
 	steamConfig SteamConfig
 	log         *slog.Logger
-	cache       toolkitModel.Cache
-	steamApps   SteamAppList
+	client      *SteamClient
 	gameManager *GameManager
 	fileManager *FileManager
 }
 
-func NewSteamProvider(config Config) (*SteamProvider, error) {
-	steamCache, err := cache.NewFileCache("games-screenshot-manager")
+func NewSteamProvider(config Config, gameManager *GameManager, fileManager *FileManager) (*SteamProvider, error) {
+	client, err := NewSteamClient(fileManager)
 	if err != nil {
-		return nil, fmt.Errorf("error creating file cache: %s", err)
+		return nil, fmt.Errorf("error creating steam client: %s", err)
+	}
+
+	// Set API key if provided in config
+	if config.Providers.Steam.APIKey != "" {
+		client.SetAPIKey(config.Providers.Steam.APIKey)
 	}
 
 	steamProvider := &SteamProvider{
 		config:      config,
 		steamConfig: config.Providers.Steam,
 		log:         slog.Default().With("provider", "steam"),
-		cache:       steamCache,
+		client:      client,
+		gameManager: gameManager,
+		fileManager: fileManager,
 	}
-
-	if err := steamProvider.downloadSteamAppList(); err != nil {
-		return nil, fmt.Errorf("error downloading steam app list: %s", err)
-	}
-
-	steamProvider.gameManager = NewGameManager()
-	steamProvider.fileManager = NewFileManager(config)
 
 	return steamProvider, nil
 }
@@ -87,23 +53,31 @@ func (p *SteamProvider) Run() error {
 		return nil
 	}
 
-	if _, err := p.GetScreenshots(); err != nil {
+	if err := p.GetScreenshots(); err != nil {
 		p.log.Error("Failed to get screenshots", slog.Any("error", err))
 	}
 
 	if p.steamConfig.ShouldProcessClips() {
-		if _, err := p.GetClips(); err != nil {
+		if err := p.GetClips(); err != nil {
 			p.log.Error("Failed to get clips", slog.Any("error", err))
 		}
 	}
 
 	if p.steamConfig.ShouldProcessRecordings() {
-		if _, err := p.GetRecordings(); err != nil {
+		if err := p.GetRecordings(); err != nil {
 			p.log.Error("Failed to get recordings", slog.Any("error", err))
 		}
 	}
 
+	// Process online gallery if enabled
+	if p.steamConfig.OnlineGallery && p.steamConfig.UserID != "" {
+		if err := p.GetPublishedScreenshots(); err != nil {
+			p.log.Error("Failed to get published screenshots", slog.Any("error", err))
+		}
+	}
+
 	if p.steamConfig.ShouldDownloadCovers() {
+		p.log.Info("Downloading covers")
 		if err := p.GetCovers(); err != nil {
 			p.log.Error("Failed to get covers", slog.Any("error", err))
 		}
@@ -112,15 +86,71 @@ func (p *SteamProvider) Run() error {
 	return nil
 }
 
-func (p *SteamProvider) GetScreenshots() ([]*Game, error) {
+// GetPublishedScreenshots retrieves screenshots published to Steam by the configured user
+func (p *SteamProvider) GetPublishedScreenshots() error {
+	if p.steamConfig.APIKey == "" {
+		return fmt.Errorf("steam API key not configured")
+	}
+
+	if p.steamConfig.UserID == "" {
+		return fmt.Errorf("steam online gallery ID not configured")
+	}
+
+	p.log.Info("Getting published screenshots from Steam",
+		slog.String("steam_id", p.steamConfig.UserID))
+
+	// Retrieve published screenshots using the client
+	publishedScreenshots, err := p.client.GetPublishedScreenshots(p.steamConfig.UserID)
+	if err != nil {
+		return fmt.Errorf("error getting published screenshots: %s", err)
+	}
+
+	p.log.Info("Found published screenshots", slog.Int("count", len(publishedScreenshots)))
+
+	// Create or update games with the screenshots
+	for _, screenshot := range publishedScreenshots {
+		gameName := p.client.GetGameName(strconv.Itoa(screenshot.AppID))
+		if gameName == "" {
+			p.log.Warn("No game name found for app ID, using app ID as game name", slog.Int("app_id", screenshot.AppID))
+			gameName = strconv.Itoa(screenshot.AppID)
+		}
+
+		appIDString := fmt.Sprintf("%d", screenshot.AppID)
+
+		// Create or get existing game
+		game := p.gameManager.GetGame(appIDString)
+		if game == nil {
+			game = NewGame(appIDString, gameName, "PC", "steam")
+			p.gameManager.AddGame(game)
+		}
+
+		var tempFile *os.File
+
+		if !p.config.DryRun {
+			tempFile, err = p.fileManager.DownloadURL(screenshot.FileURL)
+			if err != nil {
+				return fmt.Errorf("error downloading screenshot: %s", err)
+			}
+		}
+
+		media := NewMedia(MediaKindScreenshot, tempFile.Name())
+		dateTimeCreated := time.Unix(int64(screenshot.TimeCreated), 0)
+		media.DestinationName = fmt.Sprintf("%s.jpg", dateTimeCreated.Format("2006-01-02_15-04-05"))
+		game.AddScreenshot(media)
+	}
+
+	return nil
+}
+
+func (p *SteamProvider) GetScreenshots() error {
 	steamBasePath, err := p.getSteamBasePath()
 	if err != nil {
-		return nil, fmt.Errorf("error getting steam base path: %s", err)
+		return fmt.Errorf("error getting steam base path: %s", err)
 	}
 
 	users, err := p.getUsers(steamBasePath)
 	if err != nil {
-		return nil, fmt.Errorf("error getting users: %s", err)
+		return fmt.Errorf("error getting users: %s", err)
 	}
 
 	for _, userID := range users {
@@ -130,11 +160,11 @@ func (p *SteamProvider) GetScreenshots() ([]*Game, error) {
 
 		files, err := os.ReadDir(userPath)
 		if err != nil {
-			return nil, fmt.Errorf("error reading userdata path: %s", err)
+			return fmt.Errorf("error reading userdata path: %s", err)
 		}
 
 		for _, file := range files {
-			gameName := p.steamApps.GetGameName(file.Name())
+			gameName := p.client.GetGameName(file.Name())
 			if gameName == "" {
 				gameName = file.Name()
 			}
@@ -142,11 +172,13 @@ func (p *SteamProvider) GetScreenshots() ([]*Game, error) {
 			game := NewGame(file.Name(), gameName, "PC", "steam")
 			p.gameManager.AddGame(game)
 
+			p.log.Info("Processing game", slog.String("game_id", game.ID))
+
 			// Get all files from folder
 			gamePath := filepath.Join(userPath, file.Name(), "screenshots")
 			screenshots, err := os.ReadDir(gamePath)
 			if err != nil {
-				return nil, fmt.Errorf("error reading game path: %s", err)
+				return fmt.Errorf("error reading game path: %s", err)
 			}
 
 			for _, screenshot := range screenshots {
@@ -156,51 +188,33 @@ func (p *SteamProvider) GetScreenshots() ([]*Game, error) {
 				}
 			}
 
-			p.log.Info("Processing game", slog.String("game_id", file.Name()))
-		}
-
-	}
-
-	games := p.gameManager.GetGames()
-	for _, game := range games {
-		if err := p.fileManager.ProcessGame(game); err != nil {
-			p.log.Error("Error processing game", slog.Any("error", err))
-			continue
 		}
 	}
 
-	return games, nil
+	return nil
 }
 
-func (p *SteamProvider) GetRecordings() ([]Game, error) {
-	return nil, fmt.Errorf("GetRecordings not implemented")
+func (p *SteamProvider) GetRecordings() error {
+	return nil
 }
 
-func (p *SteamProvider) GetClips() ([]Game, error) {
-	return nil, fmt.Errorf("GetClips not implemented")
+func (p *SteamProvider) GetClips() error {
+	return nil
 }
 
 func (p *SteamProvider) GetCovers() error {
-	for _, game := range p.gameManager.GetGames() {
-		// Check if cover.jpg exists in destination path
-		coverPath := filepath.Join(p.fileManager.GetPathForGame(game), "cover.jpg")
-		if p.fileManager.FileExists(coverPath) {
-			continue
-		}
+	if !p.config.DryRun {
+		for _, game := range p.gameManager.GetGames() {
+			// Download cover using the client
+			tempFile, err := p.client.DownloadGameCover(game.ID)
+			if err != nil {
+				p.log.Error("error downloading cover", slog.String("game_id", game.ID), slog.Any("error", err))
+				continue
+			}
 
-		// Download cover
-		coverURL := fmt.Sprintf(steamGameHeaderURL, game.ID)
-		coverData, err := http.Get(coverURL)
-		if err != nil {
-			return fmt.Errorf("error downloading cover: %s", err)
-		}
-
-		if coverData.Body != nil {
-			defer coverData.Body.Close()
-		}
-
-		if err := p.fileManager.WriteFile(coverPath, coverData.Body); err != nil {
-			return fmt.Errorf("error writing cover file: %s", err)
+			media := NewMedia(MediaKindCover, tempFile.Name())
+			media.DestinationName = "cover.jpg"
+			p.gameManager.GetGame(game.ID).SetCover(media)
 		}
 	}
 
@@ -209,71 +223,6 @@ func (p *SteamProvider) GetCovers() error {
 
 func (p *SteamProvider) FindGames(options SteamConfig) ([]Game, error) {
 	return nil, nil
-}
-
-// downloadSteamAppList downloads the Steam APP List and caches it
-// It's used to get the JSON response with all the games so we can match the game ID (folder name)
-// with the game name (from the JSON response)
-func (p *SteamProvider) downloadSteamAppList() error {
-
-	cacheKey := "steam-applist"
-	download := true
-	var payload []byte
-
-	result, err := p.cache.Get(cacheKey)
-	if err != nil && !errors.Is(err, toolkitModel.ErrCacheKeyDontExist) {
-		return fmt.Errorf("error retrieving cache: %s", err)
-	}
-
-	if result != nil {
-		download = false
-		payload = result.([]byte)
-	}
-
-	if download {
-		p.log.Info("Downloading Steam APP List, used to get all game IDs and Names")
-		parsedURL, _ := url.Parse(steamAppListURL)
-		request := http.Request{
-			Method: "GET",
-			URL:    parsedURL,
-			Header: map[string][]string{
-				"User-Agent": {"github.com/fmartingr/games-screenshot-manager"},
-			},
-			ProtoMajor: 2,
-			ProtoMinor: 1,
-		}
-		response, err := http.DefaultClient.Do(&request)
-		if err != nil {
-			return fmt.Errorf("error making request for Steam APP List: %s", err)
-		}
-
-		if response.Body != nil {
-			defer response.Body.Close()
-		}
-
-		payload, err = io.ReadAll(response.Body)
-		if err != nil {
-			return fmt.Errorf("error reading steam response: %s", err)
-		}
-
-		if err := p.cache.Set(cacheKey, payload, cache.WithTTL(24*time.Hour)); err != nil {
-			return fmt.Errorf("error caching steam app list: %s", err)
-		}
-	}
-
-	steamListResponse := SteamAppListResponse{}
-	jsonErr := json.Unmarshal(payload, &steamListResponse)
-	if jsonErr != nil {
-		return fmt.Errorf("error unmarshalling steam's response: %s", jsonErr)
-	}
-
-	if len(steamListResponse.AppList.Apps) == 0 {
-		return fmt.Errorf("coulnd't get steam app list")
-	}
-
-	p.steamApps = steamListResponse.AppList
-
-	return nil
 }
 
 // getSteamBasePath returns the base path for the Steam installation

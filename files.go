@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/http"
 	"os"
 	"path/filepath"
 
@@ -17,15 +18,18 @@ import (
 var ErrCopyFileDestinationExists = errors.New("copy destination exists")
 
 type FileManager struct {
-	config Config
-	log    *slog.Logger
+	config  Config
+	log     *slog.Logger
+	cleanup []func()
 }
 
 func NewFileManager(config Config) *FileManager {
-	return &FileManager{config: config, log: slog.Default().With("component", "file_manager")}
+	return &FileManager{config: config, log: slog.Default().With("component", "file_manager"), cleanup: make([]func(), 0)}
 }
 
 func (f *FileManager) ProcessGame(game *Game) error {
+	f.log.Debug("Processing game", slog.String("game", game.Name))
+
 	for _, screenshot := range game.Screenshots {
 		if err := f.ProcessMedia(game, screenshot); err != nil {
 			return err
@@ -40,6 +44,12 @@ func (f *FileManager) ProcessGame(game *Game) error {
 
 	for _, recording := range game.Recordings {
 		if err := f.ProcessMedia(game, recording); err != nil {
+			return err
+		}
+	}
+
+	if game.Cover != nil {
+		if err := f.ProcessMedia(game, game.Cover); err != nil {
 			return err
 		}
 	}
@@ -115,7 +125,7 @@ func (f *FileManager) FileExists(path string) bool {
 func (f *FileManager) copyFile(src, dst string) (int64, error) {
 	sourceFileStat, err := os.Stat(src)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("error getting source file stat: %w", err)
 	}
 
 	if !sourceFileStat.Mode().IsRegular() {
@@ -124,7 +134,7 @@ func (f *FileManager) copyFile(src, dst string) (int64, error) {
 
 	source, err := os.Open(src)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("error opening source file: %w", err)
 	}
 	defer source.Close()
 
@@ -135,7 +145,7 @@ func (f *FileManager) copyFile(src, dst string) (int64, error) {
 
 	destination, err := os.Create(dst)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("error creating destination file: %w", err)
 	}
 	defer destination.Close()
 	nBytes, err := io.Copy(destination, source)
@@ -145,7 +155,7 @@ func (f *FileManager) copyFile(src, dst string) (int64, error) {
 func (f *FileManager) WriteFile(path string, data io.Reader) error {
 	destination, err := os.Create(path)
 	if err != nil {
-		return err
+		return fmt.Errorf("error creating destination file: %w", err)
 	}
 	defer destination.Close()
 	_, err = io.Copy(destination, data)
@@ -155,7 +165,7 @@ func (f *FileManager) WriteFile(path string, data io.Reader) error {
 func (f *FileManager) WriteFileIfModified(path string, data []byte) error {
 	existingData, err := os.ReadFile(path)
 	if err != nil && !os.IsNotExist(err) {
-		return err
+		return fmt.Errorf("error reading existing file: %w", err)
 	}
 
 	if bytes.Equal(existingData, data) {
@@ -165,16 +175,53 @@ func (f *FileManager) WriteFileIfModified(path string, data []byte) error {
 	return f.WriteFile(path, bytes.NewReader(data))
 }
 
+// DownloadURL downloads a URL to a temporary file and takes care of the cleanup
+func (f *FileManager) DownloadURL(url string) (tempFile *os.File, err error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, fmt.Errorf("error downloading URL: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("error downloading URL: %s", resp.Status)
+	}
+
+	tempFile, err = os.CreateTemp("", "download_*.jpg")
+	if err != nil {
+		return nil, fmt.Errorf("error creating temp file: %w", err)
+	}
+
+	f.cleanup = append(f.cleanup, func() {
+		os.Remove(tempFile.Name())
+	})
+
+	_, err = io.Copy(tempFile, resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error copying response body to temp file: %w", err)
+	}
+
+	return tempFile, nil
+}
+
+func (f *FileManager) Cleanup() error {
+	for _, cleanup := range f.cleanup {
+		cleanup()
+	}
+
+	return nil
+}
+
 func (f *FileManager) hashFile(src string) ([]byte, error) {
 	handler, err := os.Open(src)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error opening file: %w", err)
 	}
 	defer handler.Close()
 
 	h := md5.New()
 	if _, err := io.Copy(h, handler); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error copying file to hash: %w", err)
 	}
 
 	return h.Sum(nil), nil

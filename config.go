@@ -1,6 +1,7 @@
 package gamesscreenshotmanager
 
 import (
+	"fmt"
 	"os"
 
 	"git.nakama.town/fmartingr/gotoolkit/encoding"
@@ -110,6 +111,9 @@ type SteamConfig struct {
 	RecordingsPath    string            `toml:"recordings_path"`
 	ProcessRecordings bool              `toml:"process_recordings"`
 	ProcessClips      bool              `toml:"process_clips"`
+	OnlineGallery     bool              `toml:"online_gallery"`
+	UserID            string            `toml:"user_id"`
+	APIKey            string            `toml:"api_key"`
 	CustomGames       map[string]string `toml:"custom_games"`
 }
 
@@ -136,11 +140,11 @@ func NewConfig(path string) (*Config, error) {
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error reading config file: %w", err)
 	}
 
 	if err := encoder.Decode(data, config); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("error decoding config file: %w", err)
 	}
 
 	// Merge the global config with the provider configs

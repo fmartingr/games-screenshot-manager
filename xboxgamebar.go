@@ -35,15 +35,14 @@ type XboxGameBarProvider struct {
 	fileManager *FileManager
 }
 
-func NewXboxGameBarProvider(config Config) (*XboxGameBarProvider, error) {
+func NewXboxGameBarProvider(config Config, gameManager *GameManager, fileManager *FileManager) (*XboxGameBarProvider, error) {
 	xboxProvider := &XboxGameBarProvider{
-		config:     config,
-		xboxConfig: config.Providers.XboxGameBar,
-		log:        slog.Default().With("provider", xboxName),
+		config:      config,
+		xboxConfig:  config.Providers.XboxGameBar,
+		log:         slog.Default().With("provider", xboxName),
+		gameManager: gameManager,
+		fileManager: fileManager,
 	}
-
-	xboxProvider.gameManager = NewGameManager()
-	xboxProvider.fileManager = NewFileManager(config)
 
 	return xboxProvider, nil
 }
@@ -54,35 +53,35 @@ func (p *XboxGameBarProvider) Run() error {
 		return nil
 	}
 
-	if _, err := p.GetScreenshots(); err != nil {
+	if err := p.GetScreenshots(); err != nil {
 		p.log.Error("Failed to get screenshots", slog.Any("error", err))
 	}
 
 	return nil
 }
 
-func (p *XboxGameBarProvider) GetScreenshots() ([]*Game, error) {
+func (p *XboxGameBarProvider) GetScreenshots() error {
 	path, err := p.getScreenshotsPath()
 	if err != nil {
-		return nil, fmt.Errorf("error getting screenshots path: %w", err)
+		return fmt.Errorf("error getting screenshots path: %w", err)
 	}
 
 	// Check if directory exists
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil, fmt.Errorf("directory %s does not exist", path)
+		return fmt.Errorf("directory %s does not exist", path)
 	}
 
 	// Initialize exiftool
 	et, err := exiftool.NewExiftool()
 	if err != nil {
-		return nil, fmt.Errorf("error initializing exiftool: %w", err)
+		return fmt.Errorf("error initializing exiftool: %w", err)
 	}
 	defer et.Close()
 
 	// Read directory
 	files, err := os.ReadDir(path)
 	if err != nil {
-		return nil, fmt.Errorf("error reading directory %s: %w", path, err)
+		return fmt.Errorf("error reading directory %s: %w", path, err)
 	}
 
 	// Process files
@@ -186,15 +185,7 @@ func (p *XboxGameBarProvider) GetScreenshots() ([]*Game, error) {
 		game.AddScreenshot(media)
 	}
 
-	// Process all games
-	for _, game := range p.gameManager.GetGames() {
-		if err := p.fileManager.ProcessGame(game); err != nil {
-			p.log.Error("Error processing game", slog.Any("error", err))
-			continue
-		}
-	}
-
-	return p.gameManager.GetGames(), nil
+	return nil
 }
 
 func (p *XboxGameBarProvider) GetRecordings() ([]Game, error) {

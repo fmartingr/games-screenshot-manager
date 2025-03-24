@@ -18,6 +18,7 @@ const (
 	MediaKindScreenshot MediaKind = "screenshot"
 	MediaKindClip       MediaKind = "clip"
 	MediaKindRecording  MediaKind = "recording"
+	MediaKindCover      MediaKind = "cover"
 )
 
 type Media struct {

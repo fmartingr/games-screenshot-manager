@@ -3,14 +3,19 @@ package gamesscreenshotmanager
 import (
 	"embed"
 	"fmt"
+	"image"
+	"image/jpeg"
+	"image/png"
 	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	toolkitPaths "git.nakama.town/fmartingr/gotoolkit/paths"
 	toolkitTemplate "git.nakama.town/fmartingr/gotoolkit/template"
+	"golang.org/x/image/draw"
 )
 
 //go:embed templates/*.html
@@ -46,18 +51,15 @@ func NewGalleryBuilder(config Config) (*GalleryBuilder, error) {
 }
 
 func (b *GalleryBuilder) Build() (*GalleryNode, error) {
-	outputPath, err := filepath.Abs(toolkitPaths.ExpandUser(b.Config.OutputPath))
-	if err != nil {
-		return nil, fmt.Errorf("failed to get absolute path for output path: %w", err)
-	}
+	outputPath := toolkitPaths.ExpandUser(filepath.Join("./", b.Config.OutputPath))
 
 	b.Root = &GalleryNode{
 		Title: b.Config.Gallery.SiteTitle,
-		Path:  outputPath,
+		Path:  ".",
 	}
 
 	if err := os.Chdir(outputPath); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to change directory to output path: %w", err)
 	}
 
 	b.walkFolder(b.Root)
@@ -65,6 +67,77 @@ func (b *GalleryBuilder) Build() (*GalleryNode, error) {
 	b.buildSite(b.Root, time.Now().Format(time.RFC3339))
 
 	return b.Root, nil
+}
+
+// generateThumbnail creates a thumbnail for the given image path
+func (b *GalleryBuilder) generateThumbnail(sourcePath string) error {
+	// Open the source file
+	file, err := os.Open(sourcePath)
+	if err != nil {
+		return fmt.Errorf("failed to open source image: %w", err)
+	}
+	defer file.Close()
+
+	// Decode the image based on its format
+	var img image.Image
+	ext := strings.ToLower(filepath.Ext(sourcePath))
+
+	switch ext {
+	case ".jpg", ".jpeg":
+		img, err = jpeg.Decode(file)
+	case ".png":
+		img, err = png.Decode(file)
+	default:
+		return fmt.Errorf("unsupported image format: %s", ext)
+	}
+
+	if err != nil {
+		return fmt.Errorf("failed to decode image: %w", err)
+	}
+
+	// Create a thumbnail (resize the image)
+	bounds := img.Bounds()
+	width, height := bounds.Dx(), bounds.Dy()
+
+	// Calculate new dimensions (max 360x360)
+	maxSize := 360
+	var newWidth, newHeight int
+
+	if width > height {
+		if width > maxSize {
+			newWidth = maxSize
+			newHeight = height * maxSize / width
+		} else {
+			newWidth, newHeight = width, height
+		}
+	} else {
+		if height > maxSize {
+			newHeight = maxSize
+			newWidth = width * maxSize / height
+		} else {
+			newWidth, newHeight = width, height
+		}
+	}
+
+	// Create the resized image
+	dst := image.NewRGBA(image.Rect(0, 0, newWidth, newHeight))
+	draw.CatmullRom.Scale(dst, dst.Rect, img, bounds, draw.Over, nil)
+
+	// Create the output file with .thumb.jpg extension
+	// For now, we'll use JPEG thumbnails since Go's standard library supports this
+	thumbPath := sourcePath + ".thumb.jpg"
+	outFile, err := os.Create(thumbPath)
+	if err != nil {
+		return fmt.Errorf("failed to create thumbnail file: %w", err)
+	}
+	defer outFile.Close()
+
+	// Encode as JPEG with high quality
+	if err := jpeg.Encode(outFile, dst, &jpeg.Options{Quality: 85}); err != nil {
+		return fmt.Errorf("failed to encode jpeg: %w", err)
+	}
+
+	return nil
 }
 
 func (b *GalleryBuilder) walkFolder(parent *GalleryNode) {
@@ -108,11 +181,8 @@ func (b *GalleryBuilder) walkFolder(parent *GalleryNode) {
 		if !node.HasThumb() {
 			switch node.Kind() {
 			case GalleryNodeKindImage:
-				cmd := exec.Command("convert", node.Path, "-resize", "360x360>", node.Path+".thumb.jpg")
-				output, err := cmd.CombinedOutput()
-				if err != nil {
-					slog.Error("failed to generate thumb", slog.String("path", node.Path), slog.String("err", err.Error()))
-					slog.Error(string(output))
+				if err := b.generateThumbnail(node.Path); err != nil {
+					slog.Error("failed to generate thumbnail", slog.String("path", node.Path), slog.String("err", err.Error()))
 				}
 			case GalleryNodeKindVideo:
 				cmd := exec.Command("ffmpeg", "-i", node.Path, "-vf", `select=eq(n\,0)`, "-q:v", "3", node.Path+".thumb.jpg")

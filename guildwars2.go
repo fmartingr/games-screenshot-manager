@@ -32,15 +32,14 @@ type GuildWars2Provider struct {
 	fileManager *FileManager
 }
 
-func NewGuildWars2Provider(config Config) (*GuildWars2Provider, error) {
+func NewGuildWars2Provider(config Config, gameManager *GameManager, fileManager *FileManager) (*GuildWars2Provider, error) {
 	gw2Provider := &GuildWars2Provider{
-		config:    config,
-		gw2Config: config.Providers.GuildWars2,
-		log:       slog.Default().With("provider", gw2Name),
+		config:      config,
+		gw2Config:   config.Providers.GuildWars2,
+		log:         slog.Default().With("provider", gw2Name),
+		gameManager: gameManager,
+		fileManager: fileManager,
 	}
-
-	gw2Provider.gameManager = NewGameManager()
-	gw2Provider.fileManager = NewFileManager(config)
 
 	return gw2Provider, nil
 }
@@ -51,32 +50,32 @@ func (p *GuildWars2Provider) Run() error {
 		return nil
 	}
 
-	if _, err := p.GetScreenshots(); err != nil {
+	if err := p.GetScreenshots(); err != nil {
 		p.log.Error("Failed to get screenshots", slog.Any("error", err))
 	}
 
 	return nil
 }
 
-func (p *GuildWars2Provider) GetScreenshots() ([]*Game, error) {
+func (p *GuildWars2Provider) GetScreenshots() error {
 	path, err := p.getScreenshotsPath()
 	if err != nil {
-		return nil, fmt.Errorf("error getting screenshots path: %w", err)
+		return fmt.Errorf("error getting screenshots path: %w", err)
 	}
 
 	// Check if directory exists
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil, fmt.Errorf("directory %s does not exist", path)
+		return fmt.Errorf("directory %s does not exist", path)
 	}
 
 	files, err := os.ReadDir(path)
 	if err != nil {
-		return nil, fmt.Errorf("error reading from path %s: %w", path, err)
+		return fmt.Errorf("error reading from path %s: %w", path, err)
 	}
 
 	et, err := exiftool.NewExiftool()
 	if err != nil {
-		return nil, fmt.Errorf("error initializing exiftool: %w", err)
+		return fmt.Errorf("error initializing exiftool: %w", err)
 	}
 	defer et.Close()
 
@@ -105,12 +104,7 @@ func (p *GuildWars2Provider) GetScreenshots() ([]*Game, error) {
 		}
 	}
 
-	if err := p.fileManager.ProcessGame(game); err != nil {
-		p.log.Error("Error processing game", slog.Any("error", err))
-		return nil, fmt.Errorf("error processing game: %w", err)
-	}
-
-	return p.gameManager.GetGames(), nil
+	return nil
 }
 
 func (p *GuildWars2Provider) GetRecordings() ([]Game, error) {

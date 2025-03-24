@@ -28,15 +28,14 @@ type Playstation5Provider struct {
 	fileManager *FileManager
 }
 
-func NewPlaystation5Provider(config Config) (*Playstation5Provider, error) {
+func NewPlaystation5Provider(config Config, gameManager *GameManager, fileManager *FileManager) (*Playstation5Provider, error) {
 	ps5Provider := &Playstation5Provider{
-		config:    config,
-		ps5Config: config.Providers.PlayStation5,
-		log:       slog.Default().With("provider", ps5Name),
+		config:      config,
+		ps5Config:   config.Providers.PlayStation5,
+		log:         slog.Default().With("provider", ps5Name),
+		gameManager: gameManager,
+		fileManager: fileManager,
 	}
-
-	ps5Provider.gameManager = NewGameManager()
-	ps5Provider.fileManager = NewFileManager(config)
 
 	return ps5Provider, nil
 }
@@ -47,22 +46,22 @@ func (p *Playstation5Provider) Run() error {
 		return nil
 	}
 
-	if _, err := p.GetScreenshots(); err != nil {
+	if err := p.GetScreenshots(); err != nil {
 		p.log.Error("Failed to get screenshots", slog.Any("error", err))
 	}
 
 	return nil
 }
 
-func (p *Playstation5Provider) GetScreenshots() ([]*Game, error) {
+func (p *Playstation5Provider) GetScreenshots() error {
 	path, err := p.getScreenshotsPath()
 	if err != nil {
-		return nil, fmt.Errorf("error getting screenshots path: %w", err)
+		return fmt.Errorf("error getting screenshots path: %w", err)
 	}
 
 	// Check if directory exists
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil, fmt.Errorf("directory %s does not exist", path)
+		return fmt.Errorf("directory %s does not exist", path)
 	}
 
 	err = filepath.Walk(path,
@@ -117,17 +116,10 @@ func (p *Playstation5Provider) GetScreenshots() ([]*Game, error) {
 		})
 
 	if err != nil {
-		return nil, fmt.Errorf("error walking directory: %w", err)
+		return fmt.Errorf("error walking directory: %w", err)
 	}
 
-	for _, game := range p.gameManager.GetGames() {
-		if err := p.fileManager.ProcessGame(game); err != nil {
-			p.log.Error("Error processing game", slog.Any("error", err))
-			continue
-		}
-	}
-
-	return p.gameManager.GetGames(), nil
+	return nil
 }
 
 func (p *Playstation5Provider) GetRecordings() ([]Game, error) {

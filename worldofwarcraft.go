@@ -31,15 +31,14 @@ type WorldOfWarcraftProvider struct {
 	fileManager *FileManager
 }
 
-func NewWorldOfWarcraftProvider(config Config) (*WorldOfWarcraftProvider, error) {
+func NewWorldOfWarcraftProvider(config Config, gameManager *GameManager, fileManager *FileManager) (*WorldOfWarcraftProvider, error) {
 	wowProvider := &WorldOfWarcraftProvider{
-		config:    config,
-		wowConfig: config.Providers.WorldOfWarcraft,
-		log:       slog.Default().With("provider", wowName),
+		config:      config,
+		wowConfig:   config.Providers.WorldOfWarcraft,
+		log:         slog.Default().With("provider", wowName),
+		gameManager: gameManager,
+		fileManager: fileManager,
 	}
-
-	wowProvider.gameManager = NewGameManager()
-	wowProvider.fileManager = NewFileManager(config)
 
 	return wowProvider, nil
 }
@@ -50,27 +49,27 @@ func (p *WorldOfWarcraftProvider) Run() error {
 		return nil
 	}
 
-	if _, err := p.GetScreenshots(); err != nil {
+	if err := p.GetScreenshots(); err != nil {
 		p.log.Error("Failed to get screenshots", slog.Any("error", err))
 	}
 
 	return nil
 }
 
-func (p *WorldOfWarcraftProvider) GetScreenshots() ([]*Game, error) {
+func (p *WorldOfWarcraftProvider) GetScreenshots() error {
 	path, err := p.getScreenshotsPath()
 	if err != nil {
-		return nil, fmt.Errorf("error getting screenshots path: %w", err)
+		return fmt.Errorf("error getting screenshots path: %w", err)
 	}
 
 	// Check if directory exists
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		return nil, fmt.Errorf("directory %s does not exist", path)
+		return fmt.Errorf("directory %s does not exist", path)
 	}
 
 	files, err := os.ReadDir(path)
 	if err != nil {
-		return nil, fmt.Errorf("error reading from path %s: %w", path, err)
+		return fmt.Errorf("error reading from path %s: %w", path, err)
 	}
 
 	game := NewGame(wowID, wowName, wowPlatformName, wowName)
@@ -99,12 +98,7 @@ func (p *WorldOfWarcraftProvider) GetScreenshots() ([]*Game, error) {
 		}
 	}
 
-	if err := p.fileManager.ProcessGame(game); err != nil {
-		p.log.Error("Error processing game", slog.Any("error", err))
-		return nil, fmt.Errorf("error processing game: %w", err)
-	}
-
-	return p.gameManager.GetGames(), nil
+	return nil
 }
 
 func (p *WorldOfWarcraftProvider) GetRecordings() ([]Game, error) {

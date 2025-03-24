@@ -7,16 +7,20 @@ import (
 )
 
 type ProviderRegistry struct {
-	Providers map[string]Provider
-	config    *Config
-	log       *slog.Logger
+	Providers   map[string]Provider
+	config      *Config
+	log         *slog.Logger
+	gameManager *GameManager
+	fileManager *FileManager
 }
 
-func NewProviderRegistry(config *Config) (*ProviderRegistry, error) {
+func NewProviderRegistry(config *Config, gameManager *GameManager, fileManager *FileManager) (*ProviderRegistry, error) {
 	registry := &ProviderRegistry{
-		Providers: make(map[string]Provider),
-		config:    config,
-		log:       slog.Default().With("module", "provider_registry"),
+		Providers:   make(map[string]Provider),
+		config:      config,
+		log:         slog.Default().With("module", "provider_registry"),
+		gameManager: gameManager,
+		fileManager: fileManager,
 	}
 
 	if err := registry.registerProviders(); err != nil {
@@ -32,7 +36,7 @@ func (r *ProviderRegistry) registerProvider(name string, provider Provider) {
 
 func (r *ProviderRegistry) registerProviders() error {
 	if r.config.Providers.Steam.IsEnabled() {
-		steamProvider, err := NewSteamProvider(*r.config)
+		steamProvider, err := NewSteamProvider(*r.config, r.gameManager, r.fileManager)
 		if err != nil {
 			return fmt.Errorf("failed to create steam provider: %w", err)
 		}
@@ -41,7 +45,7 @@ func (r *ProviderRegistry) registerProviders() error {
 	}
 
 	if r.config.Providers.GuildWars2.IsEnabled() {
-		guildWars2Provider, err := NewGuildWars2Provider(*r.config)
+		guildWars2Provider, err := NewGuildWars2Provider(*r.config, r.gameManager, r.fileManager)
 		if err != nil {
 			return fmt.Errorf("failed to create guild wars 2 provider: %w", err)
 		}
@@ -50,7 +54,7 @@ func (r *ProviderRegistry) registerProviders() error {
 	}
 
 	if r.config.Providers.WorldOfWarcraft.IsEnabled() {
-		worldOfWarcraftProvider, err := NewWorldOfWarcraftProvider(*r.config)
+		worldOfWarcraftProvider, err := NewWorldOfWarcraftProvider(*r.config, r.gameManager, r.fileManager)
 		if err != nil {
 			return fmt.Errorf("failed to create world of warcraft provider: %w", err)
 		}
@@ -59,7 +63,7 @@ func (r *ProviderRegistry) registerProviders() error {
 	}
 
 	if r.config.Providers.Minecraft.IsEnabled() {
-		minecraftProvider, err := NewMinecraftProvider(*r.config)
+		minecraftProvider, err := NewMinecraftProvider(*r.config, r.gameManager, r.fileManager)
 		if err != nil {
 			return fmt.Errorf("failed to create minecraft provider: %w", err)
 		}
@@ -68,7 +72,7 @@ func (r *ProviderRegistry) registerProviders() error {
 	}
 
 	if r.config.Providers.PlayStation4.IsEnabled() {
-		playstation4Provider, err := NewPlaystation4Provider(*r.config)
+		playstation4Provider, err := NewPlaystation4Provider(*r.config, r.gameManager, r.fileManager)
 		if err != nil {
 			return fmt.Errorf("failed to create playstation 4 provider: %w", err)
 		}
@@ -77,7 +81,7 @@ func (r *ProviderRegistry) registerProviders() error {
 	}
 
 	if r.config.Providers.PlayStation5.IsEnabled() {
-		playstation5Provider, err := NewPlaystation5Provider(*r.config)
+		playstation5Provider, err := NewPlaystation5Provider(*r.config, r.gameManager, r.fileManager)
 		if err != nil {
 			return fmt.Errorf("failed to create playstation 5 provider: %w", err)
 		}
@@ -87,7 +91,7 @@ func (r *ProviderRegistry) registerProviders() error {
 
 	// Xbox Game Bar is only available on Windows
 	if r.config.Providers.XboxGameBar.IsEnabled() && runtime.GOOS == "windows" {
-		xboxGameBarProvider, err := NewXboxGameBarProvider(*r.config)
+		xboxGameBarProvider, err := NewXboxGameBarProvider(*r.config, r.gameManager, r.fileManager)
 		if err != nil {
 			return fmt.Errorf("failed to create xbox game bar provider: %w", err)
 		}

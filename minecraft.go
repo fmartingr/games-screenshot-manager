@@ -28,15 +28,14 @@ type MinecraftProvider struct {
 	fileManager *FileManager
 }
 
-func NewMinecraftProvider(config Config) (*MinecraftProvider, error) {
+func NewMinecraftProvider(config Config, gameManager *GameManager, fileManager *FileManager) (*MinecraftProvider, error) {
 	mcProvider := &MinecraftProvider{
-		config:   config,
-		mcConfig: config.Providers.Minecraft,
-		log:      slog.Default().With("provider", mcName),
+		config:      config,
+		mcConfig:    config.Providers.Minecraft,
+		log:         slog.Default().With("provider", mcName),
+		gameManager: gameManager,
+		fileManager: fileManager,
 	}
-
-	mcProvider.gameManager = NewGameManager()
-	mcProvider.fileManager = NewFileManager(config)
 
 	return mcProvider, nil
 }
@@ -47,17 +46,17 @@ func (p *MinecraftProvider) Run() error {
 		return nil
 	}
 
-	if _, err := p.GetScreenshots(); err != nil {
+	if err := p.GetScreenshots(); err != nil {
 		p.log.Error("Failed to get screenshots", slog.Any("error", err))
 	}
 
 	return nil
 }
 
-func (p *MinecraftProvider) GetScreenshots() ([]*Game, error) {
+func (p *MinecraftProvider) GetScreenshots() error {
 	paths, err := p.getScreenshotsPaths()
 	if err != nil {
-		return nil, fmt.Errorf("error getting screenshots paths: %w", err)
+		return fmt.Errorf("error getting screenshots paths: %w", err)
 	}
 
 	// Create standalone Minecraft game
@@ -82,15 +81,7 @@ func (p *MinecraftProvider) GetScreenshots() ([]*Game, error) {
 		p.gameManager.AddGame(flatpakGame)
 	}
 
-	games := p.gameManager.GetGames()
-	for _, game := range games {
-		if err := p.fileManager.ProcessGame(game); err != nil {
-			p.log.Error("Error processing game", slog.Any("error", err))
-			continue
-		}
-	}
-
-	return games, nil
+	return nil
 }
 
 func (p *MinecraftProvider) GetRecordings() ([]Game, error) {
