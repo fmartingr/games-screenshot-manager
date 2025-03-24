@@ -7,7 +7,7 @@ A simple tool to collect and sort games screenshots from different platforms.
 ## Installation
 
 ```
-go install github.com/fmartingr/games-screenshot-manager@latest
+go install github.com/fmartingr/games-screenshot-manager/cmd/games-screenshot-manager@latest
 ```
 
 Or get the latest binary build from the [releases page](https://github.com/fmartingr/games-screenshot-manager/releases)
