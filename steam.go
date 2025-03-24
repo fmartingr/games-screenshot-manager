@@ -208,7 +208,7 @@ func (p *SteamProvider) GetCovers() error {
 			// Download cover using the client
 			tempFile, err := p.client.DownloadGameCover(game.ID)
 			if err != nil {
-				p.log.Error("error downloading cover", slog.String("game_id", game.ID), slog.Any("error", err))
+				p.log.Error("error downloading cover", slog.String("game_id", game.ID), slog.String("game_name", game.Name), slog.Any("error", err))
 				continue
 			}
 

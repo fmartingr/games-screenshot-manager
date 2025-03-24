@@ -93,5 +93,6 @@ func RunCLI() error {
 	}
 
 	slog.Info("done")
+
 	return nil
 }
