@@ -47,7 +47,7 @@ custom_games = { "1234567890" = "Test Game" }
 	require.False(t, config.DryRun)
 
 	// Test gallery settings
-	require.True(t, config.Gallery.CreateWebGallery)
+	require.True(t, config.Gallery.Create)
 
 	// Test provider settings
 	require.Equal(t, "test_gw2_path", config.Providers.GuildWars2.GetPath())
@@ -65,7 +65,7 @@ func TestConfigSave(t *testing.T) {
 		OutputPath: "test_output",
 		DryRun:     false,
 		Gallery: GalleryConfig{
-			CreateWebGallery: true,
+			Create: true,
 		},
 		Providers: Providers{
 			GuildWars2: ProviderConfig{
@@ -99,7 +99,7 @@ func TestConfigSave(t *testing.T) {
 
 	// Compare the configs
 	require.Equal(t, config.OutputPath, newConfig.OutputPath)
-	require.Equal(t, config.Gallery.CreateWebGallery, newConfig.Gallery.CreateWebGallery)
+	require.Equal(t, config.Gallery.Create, newConfig.Gallery.Create)
 	require.Equal(t, config.Providers.GuildWars2.GetPath(), newConfig.Providers.GuildWars2.GetPath())
 	require.Equal(t, config.Providers.Steam.GetPath(), newConfig.Providers.Steam.GetPath())
 }

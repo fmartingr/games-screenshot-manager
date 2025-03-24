@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>{{ .Title }}{{ if .SiteTitle }} | {{ .SiteTitle }}{{ end }}</title>
+
+        <!-- Open Graph meta tags -->
+        <meta property="og:title" content="{{ .Title }}" />
+        <meta property="og:type" content="website" />
+        {{ if .Node.Parent }}
+        <meta property="og:url" content="{{ .Context.SiteURL }}/{{ .Node.Path }}/" />
+        <meta property="og:image" content="{{ .Context.SiteURL }}{{ .Node.GetWebCoverPath }}" />
+        <meta property="og:description" content="{{ .Context.Author }}'s screenshots for {{ .Title }}" />
+        {{ end }}
+
+        <style type="text/css">
+            :root {
+                --bg-color: #ffffff;
+                --text-color: #000000;
+                --shadow-color: rgba(0, 0, 0, 0.5);
+            }
+
+            @media (prefers-color-scheme: dark) {
+                :root {
+                    --bg-color: #1a1a1a;
+                    --text-color: #ffffff;
+                    --shadow-color: rgba(0, 0, 0, 0.8);
+                }
+            }
+
+            body {
+                font-family: monospace;
+                background-color: var(--bg-color);
+                color: var(--text-color);
+            }
+
+            a {
+                color: var(--text-color);
+            }
+
+            .content {
+                margin: 0 auto;
+                padding: 20px;
+                /* max-width: 1024px; */
+            }
+
+            .breadcrumbs {
+                list-style-type: none;
+                padding: 0;
+                margin: 0;
+            }
+
+            .breadcrumbs li {
+                display: inline;
+                margin-right: 5px;
+            }
+
+            .breadcrumbs li:after {
+                content: ">";
+                margin-left: 5px;
+            }
+
+            .breadcrumbs li:last-child:after {
+                content: "";
+            }
+
+            .gallery {
+                list-style-type: none;
+                display: flex;
+                flex-wrap: wrap;
+                padding: 0;
+                align-items: center;
+                align-content: flex-start;
+                flex-direction: row;
+                justify-content: space-evenly;
+            }
+
+            .gallery li {
+                flex-grow: 1;
+                margin: 10px;
+                text-align: center;
+                vertical-align: middle;
+                max-width: 256px;
+                max-height: 256px;
+                position: relative;
+            }
+
+            .gallery li .preview {
+                max-width: 100%;
+                max-height: 100%;
+                border-radius: 5px;
+                box-shadow: 0 0 5px var(--shadow-color);
+            }
+
+            .gallery li .overlay-video {
+                color: white;
+                padding: 5px;
+                margin: 5px;
+                background-color: rgba(0, 0, 0, 0.7);
+                position: absolute;
+                right: 0;
+                top: 0;
+                border-radius: 5px;
+                width: 16px;
+                height: 16px;
+            }
+
+            footer {
+                text-align: center;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="content">
+            <header>
+                <h1>{{ .Context.Author }}'s Videogames Screenshot Gallery</h1>
+
+                {{ if .Node.Parent }}
+                <ul class="breadcrumbs">
+                    {{ range .Node.GetBreadcrumbs }}
+                    <li><a href="{{ .GetWebPath }}">{{ .Title }}</a></li>
+                    {{ end }}
+                </ul>
+
+                <h2>{{ .Node.Title }}</h2>
+                {{ end }}
+            </header>
+
+            {{ if .Node.Folders }}
+            <ul class="gallery">
+                {{ range .Node.Folders }} {{ if not .Empty}}
+                <li>
+                    <a href="{{ .GetWebPath }}">
+                        <img src="{{ .GetWebCoverPath }}" alt="{{ .Title }}" class="preview" />
+                    </a>
+                </li>
+                {{ end }} {{ end }}
+            </ul>
+            {{ end }}
+
+            {{ if .Node.Files }}
+            {{ if .Node.Folders}}<hr />{{ end }}
+            <ul class="gallery">
+                {{ range .Node.Files }}
+                <li>
+                    <a href="{{ .GetWebPath }}">
+                        <img src="{{ .GetThumbPath }}" class="preview {{ if eq .Kind "video" }}video{{ end }}" />
+                    </a>
+                    {{ if eq .Kind "video" }}
+                    <div class="overlay-video">
+                        <span>&#9654;</span>
+                    </div>
+                    {{ end }}
+                </li>
+                {{ end }}
+            </ul>
+            {{ end}}
+            <footer>
+                <p>{{ .Context.FooterText }}</p>
+                <p>Last updated: {{ .LastUpdated }}</p>
+                <p>Created using <a href="https://github.com/fmartingr/games-screenshot-manager">Games Screenshot Manager</a></p>
+            </footer>
+        </div>
+    </body>
+</html>

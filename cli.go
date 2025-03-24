@@ -40,5 +40,16 @@ func RunCLI() error {
 		}
 	}
 
+	if config.Gallery.Create {
+		builder, err := NewGalleryBuilder(*config)
+		if err != nil {
+			return fmt.Errorf("failed to create gallery builder: %w", err)
+		}
+
+		if _, err := builder.Build(); err != nil {
+			return fmt.Errorf("failed to build gallery: %w", err)
+		}
+	}
+
 	return nil
 }

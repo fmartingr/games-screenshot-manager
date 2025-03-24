@@ -51,11 +51,18 @@ func (c *GlobalConfig) Defaults() {
 
 // GalleryConfig represents the web gallery configuration
 type GalleryConfig struct {
-	CreateWebGallery bool `toml:"create_web_gallery"`
+	Create    bool              `toml:"create"`
+	SiteTitle string            `toml:"site_title"`
+	Context   map[string]string `toml:"context"`
 }
 
 func (c *GalleryConfig) Defaults() {
-	c.CreateWebGallery = false
+	c.Create = false
+	c.SiteTitle = "Video Games Screenshots"
+
+	if c.Context == nil {
+		c.Context = map[string]string{}
+	}
 }
 
 // ProviderConfig represents the configuration for a specific provider
@@ -74,6 +81,13 @@ func (c *ProviderConfig) GetPath() string {
 		return *c.Path
 	}
 	return "auto"
+}
+
+func (c *ProviderConfig) ShouldDownloadCovers() bool {
+	if c.DownloadCovers != nil {
+		return *c.DownloadCovers
+	}
+	return false
 }
 
 // Merge merges the provider config with the global config and defaults

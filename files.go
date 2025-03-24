@@ -81,7 +81,7 @@ func (f *FileManager) ProcessMedia(game *Game, media MediaFile) error {
 		return fmt.Errorf("error calculating hash for media: %s", err)
 	}
 
-	if f.fileExists(destMediaPath) {
+	if f.FileExists(destMediaPath) {
 		destMediaHash, err := f.hashFile(destMediaPath)
 		if err != nil {
 			return fmt.Errorf("error calculating hash for media destination: %s", err)
@@ -107,7 +107,7 @@ func (f *FileManager) ProcessMedia(game *Game, media MediaFile) error {
 	return nil
 }
 
-func (f *FileManager) fileExists(path string) bool {
+func (f *FileManager) FileExists(path string) bool {
 	_, err := os.Stat(path)
 	return !os.IsNotExist(err)
 }
@@ -140,6 +140,16 @@ func (f *FileManager) copyFile(src, dst string) (int64, error) {
 	defer destination.Close()
 	nBytes, err := io.Copy(destination, source)
 	return nBytes, err
+}
+
+func (f *FileManager) WriteFile(path string, data io.Reader) error {
+	destination, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer destination.Close()
+	_, err = io.Copy(destination, data)
+	return err
 }
 
 func (f *FileManager) hashFile(src string) ([]byte, error) {
