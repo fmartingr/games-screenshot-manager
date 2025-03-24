@@ -152,6 +152,19 @@ func (f *FileManager) WriteFile(path string, data io.Reader) error {
 	return err
 }
 
+func (f *FileManager) WriteFileIfModified(path string, data []byte) error {
+	existingData, err := os.ReadFile(path)
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+
+	if bytes.Equal(existingData, data) {
+		return nil
+	}
+
+	return f.WriteFile(path, bytes.NewReader(data))
+}
+
 func (f *FileManager) hashFile(src string) ([]byte, error) {
 	handler, err := os.Open(src)
 	if err != nil {

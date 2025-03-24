@@ -22,6 +22,7 @@ type GalleryBuilder struct {
 	IgnoreNames    []string
 	templateEngine *toolkitTemplate.Engine
 	log            *slog.Logger
+	fileManager    *FileManager
 }
 
 func NewGalleryBuilder(config Config) (*GalleryBuilder, error) {
@@ -39,7 +40,8 @@ func NewGalleryBuilder(config Config) (*GalleryBuilder, error) {
 			"index.html",
 			"*.thumb.jpg",
 		},
-		log: slog.Default().With("component", "gallery"),
+		fileManager: NewFileManager(config),
+		log:         slog.Default().With("component", "gallery"),
 	}, nil
 }
 
@@ -132,10 +134,6 @@ func (b *GalleryBuilder) walkFolder(parent *GalleryNode) {
 func (b *GalleryBuilder) buildSite(node *GalleryNode, lastUpdated string) {
 	switch node.Kind() {
 	case GalleryNodeKindFolder:
-		indexFile, err := os.OpenFile(filepath.Join(node.Path, "index.html"), os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
-		if err != nil {
-			slog.Error("failed to create file", slog.String("path", node.Path), slog.String("err", err.Error()))
-		}
 		result, err := b.templateEngine.Render("album.html", map[string]any{
 			"Node":        &node,
 			"LastUpdated": lastUpdated,
@@ -145,10 +143,10 @@ func (b *GalleryBuilder) buildSite(node *GalleryNode, lastUpdated string) {
 		if err != nil {
 			slog.Error("failed to render template", slog.String("path", node.Path), slog.String("err", err.Error()))
 		}
-		if _, err := indexFile.Write(result); err != nil {
+
+		if err := b.fileManager.WriteFileIfModified(filepath.Join(node.Path, "index.html"), result); err != nil {
 			slog.Error("failed to write template", slog.String("path", node.Path), slog.String("err", err.Error()))
 		}
-		indexFile.Close()
 
 		for _, folder := range node.Folders {
 			b.buildSite(folder, lastUpdated)
