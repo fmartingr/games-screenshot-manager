@@ -50,15 +50,57 @@ If no `-config` flag is provided, the binary will look for a `config.toml` file 
 
 ## Supported providers
 
-| Name              | Linux | Windows | macOS | Screenshots | Clips | Recordings | Covers | Notes                                                                                                                  |
-| ----------------- | ----- | ------- | ----- | ----------- | ----- | ---------- | ------ | ---------------------------------------------------------------------------------------------------------------------- |
-| Guild Wars 2      | No    | Yes     | No    | Yes         | -     | --         | No     | Works on unsupported platforms with `path` pointing to screenshots folder                                              |
-| Minecraft         | Yes   | Yes     | Yes   | Yes         | -     | --         | No     |                                                                                                                        |
-| PlayStation 4     | -     | -       | -     | Yes         | Yes   | --         | No     | Requires `path` pointing to PS4 folder                                                                                 |
-| PlayStation 5     | -     | -       | -     | Yes         | Yes   | --         | No     | Requires `path` pointing to PS5 folder                                                                                 |
-| Steam             | Yes   | Yes     | Yes   | Yes         | No    | No         | No     | Also supports downloading screenshots uploaded to Steam by specifying `steam_user_id` and `api_key` in the config file |
-| World of Wardraft | No    | Yes     | Yes   | Yes         | Yes   | --         | No     | Works on unsupported platforms with `path` pointing to screenshots folder                                              |
-| Xbox Game Bar     | -     | Yes     | -     | Yes         | No    | No         | No     | Requires `path` pointing to the folder holding the captures                                                            |
+### Guild Wars 2
+
+- **Supported platforms**: Windows (other platforms require a custom path)
+- **Screenshots**: Yes
+- **Clips**: Not supported by the game
+- **Recordings**: Not supported by the game
+
+### Minecraft
+
+- **Supported platforms**: Windows, macOS, Linux (launcher) and Linux (flatpak).
+- **Screenshots**: Yes
+- **Clips**: Not supported by the game
+- **Recordings**: Not supported by the game
+
+### PlayStation 4
+
+- **Supported platforms**: None, requires a custom path.
+- **Screenshots**: Yes
+- **Clips**: Yes (30s videos)
+- **Recordings**: Not supported by the game
+
+### PlayStation 5
+
+- **Supported platforms**: None, requires a custom path.
+- **Screenshots**: Yes
+- **Clips**: Yes (30s videos)
+- **Recordings**: Not supported by the game
+
+### Steam
+
+- **Supported platforms**: Windows, macOS and Linux.
+- **Screenshots**: Yes
+- **Clips**: No
+- **Recordings**: No
+- **Covers**: Yes, auto-downloads the header from Steam
+
+Also supports downloading screenshots uploaded to Steam by specifying `steam_user_id` and `api_key` in appropiate sections in [the config file](./config.example.toml).
+
+### World of Warcraft
+
+- **Supported platforms**: Windows, macOS. (Other platforms require a custom path)
+- **Screenshots**: Yes
+- **Clips**: Not supported by the game
+- **Recordings**: Not supported by the game
+
+### Xbox Game Bar
+
+- **Supported platforms**: Windows only.
+- **Screenshots**: Yes
+- **Clips**: No
+- **Recordings**: No
 
 ## Requirements
 
