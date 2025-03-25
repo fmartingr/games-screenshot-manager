@@ -1,29 +1,38 @@
-# This is an example config file for the games-screenshot-manager.
+# This is an example config file for the games-screenshot-manager that will guide you
+# to configure each section.
 
-# This option will run the program without actually downloading the files.
+# This is the destination directory where all screenshots will be copied to
+output_path = "~/Output"
+
+# Enabling this option will run the program without actually modifying any files.
 dry_run = false
 
-# This option will specify the path to the output directory.
-output_path = "Output"
-
-# This section is used to configure the global settings for all providers.
-# You can override these settings for each provider in each `providers` section.
+# [GLOBAL]
+# This section contains common configuration options for all providers. You can set your defaults here
+# and then override each provider manually.
+# For example, you can set `enabled=false` here to disable all providers and then enable only the providers
+# you need.
 [global]
 # This option will enable/disable providers globally.
 enabled = true
 
-# This option will download the covers for the games.
+# This option will attempt to download covers for the games it detects.
+# **Not all providers support this**, check the documentation.
 download_covers = true
 
-# This section is used to configure the gallery settings.
+# [GALLERY]
+# This section is used to set up the gallery generation. Once all your media files are copied to the
+# destionation folder this will generate thumbnails and index.html in the folders so you can upload
+# your output folder to a static hosting and have your screenshots deployed in a nice and minimal gallery.
 [gallery]
-# This option will create a web gallery.
+# Enables the gallery generation.
 create = false
 
-# This option will specify the title of the gallery.
+# The title shown in the gallery
 site_title = "Games Screenshots"
 
-# This section allows to specify context information for the gallery template.
+# Artibrary context available in the template, we provide some defaults the template included uses but
+# leave the room open for future improvements.
 [gallery.context]
 # This option will specify the title of the gallery.
 Title = "Games Screenshots"
@@ -37,52 +46,89 @@ SiteURL = "http://screenshots.fmartingr.com"
 # This option will specify the footer text of the gallery.
 FooterText = "fmartingr's personal screenshot collection, copyright their respective companies. Be wary of spoilers!"
 
-#
+# [PROVIDERS]
 # Providers configuration
-#
+# This contains several subsections, one per supported provider.
+# Each provider comes with a `path` that points to the folder where the screenshots reside. In some cases this can be
+# set to `auto` (the default) to automatically determine the folder where the screenshots are. This is not compatible with
+# all providers or in platforms the games is not available.
 
+# GUILD WARS 2
 [providers.guild_wars_2]
-# This option will enable/disable the provider.
+# Enable/disable the provider.
 enabled = false
 
 # This option will specify the path to the screenshots folder.
 # 'auto' will try to guess the path based on the platform.
 path = "auto"
 
+# MINECRAFT
 [providers.minecraft]
+# Enable/disable the provider.
+enabled = false
+
+# This option will specify the path to the screenshots folder.
+# 'auto' will try to guess the path based on the platform.
 path = "auto"
 
+# PLAYSTATION 4
 [providers.playstation4]
+# Enable/disable the provider.
+enabled = false
+
 # This option will specify the path to the screenshots folder.
+# This provider does not support auto-detection.
 path = ""
 
+# PLAYSTATION 5
 [providers.playstation5]
+# Enable/disable the provider.
+enabled = false
+
 # This option will specify the path to the screenshots folder.
+# This provider does not support auto-detection.
 path = ""
 
+# STEAM
 [providers.steam]
+# Enable/disable the provider.
+enabled = false
+
 # This option will specify the path to the Steam user data folder.
+# 'auto' will try to guess the path based on the platform.
 userdata_path = "auto"
 
 # This option will enable/disable downloading screenshots from the Steam online gallery.
+# For this to work you need to set up your user ID and API key below.
 online_gallery = false
 
-# This option will specify the Steam user ID.
+# This option will specify the Steam user ID. Check yours at https://steamdb.info/
 user_id = ""
 
-# This option will specify the Steam API key.
+# This option will specify the Steam API key. Get yours at https://steamcommunity.com/dev/apikey
 api_key = ""
 
-# This option will specify names to use for games that are not in the Steam store.
-# The key is the game ID and the value is the game name.
-# This is useful for games that are not in the Steam store, like games you install on Steam to play with Proton.
+# This option will specify names to use for games that are not in the Steam store in the format:
+# "game id" = "Game name"
+# This is useful for games that are not in the Steam store, like games you install on Steam to play with Proton or when
+# you use Steam to launch other platforms games (Lutris, Epic Games Store, etc) to get screenshots from them.
 [providers.steam.custom_games]
 "1234567890" = "Custom Game"
 
+# WORLD OF WARCRAFT
 [providers.world_of_warcraft]
+# Enable/disable the provider.
+enabled = false
+
 # This option will specify the path to the screenshots folder.
+# 'auto' will try to guess the path based on the platform.
 path = "auto"
 
+# XBOX GAME BAR
 [providers.xbox_game_bar]
+# Enable/disable the provider.
+enabled = false
+
 # This option will specify the path to the screenshots folder.
+# 'auto' will try to guess the path based on Windows.
 path = "auto"

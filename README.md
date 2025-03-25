@@ -4,7 +4,23 @@
 
 A simple tool to collect and sort games screenshots from different platforms.
 
-## Installation
+## Features
+
+- Collect screenshots taken from different platforms/games. See [Supported providers](#supported-providers) for the list of supported providers.
+  - **Steam**
+  - **Guild Wars 2**
+  - **Minecraft**
+  - **PlayStation 4**
+  - **PlayStation 5**
+  - **World of Warcraft**
+  - **Xbox Game Bar**
+- Automatically organize screenshots by platform and game in chronological order.
+- Download covers for the games in some providers automatically.
+- Generate a gallery of the screenshots. ([check mine](https://screenshots.fmartingr.com))
+
+## Quickstart
+
+### Installation
 
 ```
 go install github.com/fmartingr/games-screenshot-manager/cmd/games-screenshot-manager@latest
@@ -12,11 +28,15 @@ go install github.com/fmartingr/games-screenshot-manager/cmd/games-screenshot-ma
 
 Or get the latest binary build from the [releases page](https://github.com/fmartingr/games-screenshot-manager/releases)
 
-## Usage
+### Configuration
 
 Create a configuration file following the [example config](./config.example.toml).
 
-Run the binary or the installed command:
+The file contains a step by step guide to set up each section, go through the file and set up the features you want to use.
+
+### Usage
+
+Run the `games-screenshot-manager` command:
 
 ```
 games-screenshot-manager -config ./config.toml
@@ -49,3 +69,7 @@ If no `-config` flag is provided, the binary will look for a `config.toml` file 
 This project initially started as a Nintendo Switch helper to import and properly organize Switch screenshots since their system was a mess, but Nintendo improved this over the years and now we can use Android File Transfer to easily get the screenshots from a Nintendo Switch with the proper game name as folder name and the screenshots sorted by date.
 
 For more information about this, [read this issue](https://github.com/RenanGreca/Switch-Screenshots/issues/46)
+
+## License
+
+See [LICENSE](LICENSE).
