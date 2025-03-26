@@ -165,7 +165,14 @@ func (p *SteamProvider) GetScreenshots() error {
 
 		for _, file := range files {
 			gameName := p.client.GetGameName(file.Name())
+
+			if gameName == "" && p.steamConfig.CustomGames[file.Name()] != "" {
+				gameName = p.steamConfig.CustomGames[file.Name()]
+			}
+
+			// If game name is empty, use the folder name
 			if gameName == "" {
+				p.log.Warn("No game name found", slog.String("game_id", file.Name()))
 				gameName = file.Name()
 			}
 
