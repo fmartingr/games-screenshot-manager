@@ -1,7 +1,10 @@
 package gamesscreenshotmanager
 
 import (
+	"bytes"
+	"crypto/sha1"
 	"fmt"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -157,6 +160,7 @@ func (p *SteamProvider) GetPublishedScreenshots() error {
 		media := NewMedia(MediaKindScreenshot, tempFile.Name())
 		dateTimeCreated := time.Unix(int64(screenshot.TimeCreated), 0)
 		media.DestinationName = fmt.Sprintf("%s.jpg", dateTimeCreated.Format("2006-01-02_15-04-05"))
+		media.ComparisionFunc = steamGalleryComparisonFunc
 		game.AddScreenshot(media)
 	}
 
@@ -298,4 +302,25 @@ func (p *SteamProvider) getUsers(steamBasePath string) ([]string, error) {
 	}
 
 	return userIDs, nil
+}
+
+func steamGalleryComparisonFunc(m MediaFile, destinationPath string) bool {
+	parts := strings.Split(m.GetSourcePath(), "/")
+	sha1hash := parts[len(parts)-1]
+
+	// Generate SHA1 hash for destination file
+	destFile, err := os.Open(destinationPath)
+	if err != nil {
+		return false
+	}
+	defer destFile.Close()
+
+	destHash := sha1.New()
+	if _, err := io.Copy(destHash, destFile); err != nil {
+		return false
+	}
+
+	// Compare the hashes
+	return bytes.Equal(bytes.ToLower([]byte(sha1hash)), bytes.ToLower(destHash.Sum(nil)))
+
 }

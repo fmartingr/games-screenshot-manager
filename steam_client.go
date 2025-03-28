@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"git.nakama.town/fmartingr/gotoolkit/cache"
@@ -36,6 +37,17 @@ type PublishedFileDetail struct {
 	PublishedFileID string `json:"publishedfileid"`
 	TimeCreated     int    `json:"time_created"`
 	TimeUpdated     int    `json:"time_updated"`
+	ShortcutName    string `json:"shortcutname"`
+}
+
+func (f *PublishedFileDetail) GetFileSHA1() string {
+	parts := strings.Split(f.FileURL, "/")
+	return parts[len(parts)-1]
+}
+
+func (f *PublishedFileDetail) GetPreviewSHA1() string {
+	parts := strings.Split(f.PreviewURL, "/")
+	return parts[len(parts)-1]
 }
 
 // SteamPublishedFilesResponse represents the response from GetPublishedFilesByUser
@@ -284,6 +296,9 @@ func (c *SteamClient) getPublishedFilesByUser(steamID string) ([]PublishedFileDe
 		if err != nil {
 			return nil, fmt.Errorf("error reading response: %s", err)
 		}
+
+		// Store the body for debugging
+		// _ = os.WriteFile(fmt.Sprintf("steam-published-files-%d.json", page), body, 0644)
 
 		// Parse the response
 		var result SteamPublishedFilesResponse

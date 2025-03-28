@@ -2,7 +2,6 @@ package gamesscreenshotmanager
 
 import (
 	"bytes"
-	"crypto/md5"
 	"errors"
 	"fmt"
 	"io"
@@ -10,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	toolkitPaths "git.nakama.town/fmartingr/gotoolkit/paths"
 	"github.com/gosimple/slug"
@@ -69,7 +69,13 @@ func (f *FileManager) GetPathForGame(game *Game) string {
 }
 
 func (f *FileManager) ProcessMedia(game *Game, media MediaFile) error {
-	f.log.Debug("Processing media", slog.String("path", media.GetPath()), slog.String("destination_name", media.GetDestinationName()))
+	f.log.Debug(
+		"Processing media",
+		slog.Bool("is_local", media.IsLocal()),
+		slog.String("source_path", media.GetSourcePath()),
+		slog.String("source_url", media.GetSourceURL()),
+		slog.String("destination_name", media.GetDestinationName()),
+	)
 
 	destinationPath := f.GetPathForGame(game)
 	if media.GetKind() == MediaKindRecording {
@@ -86,29 +92,29 @@ func (f *FileManager) ProcessMedia(game *Game, media MediaFile) error {
 
 	destMediaPath := filepath.Join(destinationPath, media.GetDestinationName())
 
-	srcMediaHash, err := f.hashFile(media.GetPath())
-	if err != nil {
-		return fmt.Errorf("error calculating hash for media: %s", err)
-	}
-
 	if f.FileExists(destMediaPath) {
-		destMediaHash, err := f.hashFile(destMediaPath)
-		if err != nil {
-			return fmt.Errorf("error calculating hash for media destination: %s", err)
-		}
-
-		if bytes.Equal(srcMediaHash, destMediaHash) {
-			// File already processed
+		if media.Compare(destMediaPath) {
 			return nil
 		} else {
-			slog.Warn("media already exists but hash mismatch", slog.String("src", media.GetPath()), slog.String("dst", destMediaPath))
+			destinationName := media.GetDestinationName()
+			extestion := filepath.Ext(destinationName)
+			destinationName = strings.TrimSuffix(destinationName, extestion)
+			destinationName = fmt.Sprintf("%s_%s%s", destinationName, media.GetSourceHash(), extestion)
+			slog.Warn(
+				"media already exists but hash mismatch, renaming file",
+				slog.String("source_path", media.GetSourcePath()),
+				slog.String("source_url", media.GetSourceURL()),
+				slog.String("old_destination_path", destMediaPath),
+				slog.String("new_destination_path", destinationName),
+			)
+			media.SetDestinationName(destinationName)
 		}
 	}
 
 	if f.config.DryRun {
-		slog.Info("copy media", slog.String("src", media.GetPath()), slog.String("dst", destMediaPath))
+		slog.Info("copy media", slog.String("src", media.GetSourcePath()), slog.String("dst", destMediaPath))
 	} else {
-		_, err := f.copyFile(media.GetPath(), destMediaPath)
+		_, err := f.copyFile(media.GetSourcePath(), filepath.Join(destinationPath, media.GetDestinationName()))
 		if err != nil {
 			return fmt.Errorf("error copying media: %s", err)
 		}
@@ -210,19 +216,4 @@ func (f *FileManager) Cleanup() error {
 	}
 
 	return nil
-}
-
-func (f *FileManager) hashFile(src string) ([]byte, error) {
-	handler, err := os.Open(src)
-	if err != nil {
-		return nil, fmt.Errorf("error opening file: %w", err)
-	}
-	defer handler.Close()
-
-	h := md5.New()
-	if _, err := io.Copy(h, handler); err != nil {
-		return nil, fmt.Errorf("error copying file to hash: %w", err)
-	}
-
-	return h.Sum(nil), nil
 }
