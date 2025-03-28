@@ -109,6 +109,27 @@ func (p *SteamProvider) GetPublishedScreenshots() error {
 
 	// Create or update games with the screenshots
 	for _, screenshot := range publishedScreenshots {
+		if screenshot.AppID == 0 {
+			gameID := p.client.GetGameID(screenshot.ShortcutName)
+			if gameID == "" {
+				p.log.Warn("No game ID found for shortcut name", slog.String("shortcut_name", screenshot.ShortcutName))
+				continue
+			} else {
+				p.log.Warn(
+					"Found screenshot with app ID 0 and couldn't find game ID using shortcut name",
+					slog.Any("screenshot", screenshot),
+					slog.String("shortcut_name", screenshot.ShortcutName),
+					slog.String("game_id", gameID),
+				)
+			}
+
+			screenshot.AppID, err = strconv.Atoi(gameID)
+			if err != nil {
+				p.log.Error("Error converting game ID to int", slog.String("game_id", gameID), slog.Any("error", err))
+				continue
+			}
+		}
+
 		gameName := p.client.GetGameName(strconv.Itoa(screenshot.AppID))
 		if gameName == "" {
 			p.log.Warn("No game name found for app ID, using app ID as game name", slog.Int("app_id", screenshot.AppID))

@@ -89,6 +89,15 @@ func (s *SteamAppList) GetGameName(gameID string) string {
 	return ""
 }
 
+func (s *SteamAppList) GetGameID(gameName string) string {
+	for _, app := range s.Apps {
+		if app.Name == gameName {
+			return fmt.Sprintf("%d", app.AppID)
+		}
+	}
+	return ""
+}
+
 type SteamAppListResponse struct {
 	AppList SteamAppList `json:"applist"`
 }
@@ -118,6 +127,8 @@ func NewSteamClient(fileManager *FileManager) (*SteamClient, error) {
 	if err := client.DownloadSteamAppList(); err != nil {
 		return nil, fmt.Errorf("error downloading steam app list: %s", err)
 	}
+
+	client.log.Info("Steam app list ready", slog.Int("num_apps", len(client.steamApps.Apps)))
 
 	return client, nil
 }
@@ -199,6 +210,11 @@ func (c *SteamClient) GetSteamApps() SteamAppList {
 // GetGameName returns the name of a game by its ID
 func (c *SteamClient) GetGameName(gameID string) string {
 	return c.steamApps.GetGameName(gameID)
+}
+
+// GetGameID returns the ID of a game by its name
+func (c *SteamClient) GetGameID(gameName string) string {
+	return c.steamApps.GetGameID(gameName)
 }
 
 // DownloadGameCover downloads a game's cover image
