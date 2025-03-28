@@ -1,8 +1,8 @@
 package gamesscreenshotmanager
 
 import (
-	"bytes"
 	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"log/slog"
@@ -297,8 +297,15 @@ func (p *SteamProvider) getUsers(steamBasePath string) ([]string, error) {
 }
 
 func steamGalleryComparisonFunc(m MediaFile, destinationPath string) bool {
-	parts := strings.Split(m.GetSourcePath(), "/")
-	sha1hash := parts[len(parts)-1]
+	parts := strings.Split(m.GetSourceURL(), "/")
+	if len(parts) < 2 {
+		return false
+	}
+
+	sha1hash := parts[len(parts)-2]
+	if sha1hash == "" {
+		return false
+	}
 
 	// Generate SHA1 hash for destination file
 	destFile, err := os.Open(destinationPath)
@@ -312,7 +319,8 @@ func steamGalleryComparisonFunc(m MediaFile, destinationPath string) bool {
 		return false
 	}
 
-	// Compare the hashes
-	return bytes.Equal(bytes.ToLower([]byte(sha1hash)), bytes.ToLower(destHash.Sum(nil)))
+	destHashString := hex.EncodeToString(destHash.Sum(nil))
 
+	// Compare the hashes
+	return destHashString == strings.ToLower(sha1hash)
 }
