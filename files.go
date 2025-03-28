@@ -93,7 +93,7 @@ func (f *FileManager) ProcessMedia(game *Game, media MediaFile) error {
 	destMediaPath := filepath.Join(destinationPath, media.GetDestinationName())
 
 	if f.FileExists(destMediaPath) {
-		if media.Compare(destMediaPath) {
+		if media.Compare(destMediaPath) && media.GetKind() != MediaKindCover {
 			return nil
 		} else {
 			destinationName := media.GetDestinationName()
