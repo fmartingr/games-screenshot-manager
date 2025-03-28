@@ -93,9 +93,11 @@ func (f *FileManager) ProcessMedia(game *Game, media MediaFile) error {
 	destMediaPath := filepath.Join(destinationPath, media.GetDestinationName())
 
 	if f.FileExists(destMediaPath) {
-		if media.Compare(destMediaPath) && media.GetKind() != MediaKindCover {
+		if media.Compare(destMediaPath) {
 			return nil
-		} else {
+		}
+
+		if media.GetKind() != MediaKindCover {
 			destinationName := media.GetDestinationName()
 			extestion := filepath.Ext(destinationName)
 			destinationName = strings.TrimSuffix(destinationName, extestion)
@@ -108,15 +110,33 @@ func (f *FileManager) ProcessMedia(game *Game, media MediaFile) error {
 				slog.String("new_destination_path", destinationName),
 			)
 			media.SetDestinationName(destinationName)
+		} else {
+			slog.Warn(
+				"cover already exists but hash mismatch, skipping",
+				slog.String("source_path", media.GetSourcePath()),
+				slog.String("source_url", media.GetSourceURL()),
+				slog.String("destination_path", destMediaPath),
+			)
+
+			return nil
 		}
 	}
 
 	if f.config.DryRun {
 		slog.Info("copy media", slog.String("src", media.GetSourcePath()), slog.String("dst", destMediaPath))
 	} else {
+		if !media.IsLocal() {
+			tempFile, err := f.DownloadURL(media.GetSourceURL())
+			if err != nil {
+				return fmt.Errorf("error downloading URL: %w", err)
+			}
+
+			media.SetSourcePath(tempFile.Name())
+		}
+
 		_, err := f.copyFile(media.GetSourcePath(), filepath.Join(destinationPath, media.GetDestinationName()))
 		if err != nil {
-			return fmt.Errorf("error copying media: %s", err)
+			return fmt.Errorf("error copying media %s -> %s: %s", media.GetSourcePath(), destMediaPath, err)
 		}
 	}
 

@@ -85,11 +85,11 @@ func RunCLI() error {
 			if _, err := builder.Build(); err != nil {
 				return fmt.Errorf("failed to build gallery: %w", err)
 			}
-
-			if err := fileManager.Cleanup(); err != nil {
-				return fmt.Errorf("failed to cleanup: %w", err)
-			}
 		}
+	}
+
+	if err := fileManager.Cleanup(); err != nil {
+		return fmt.Errorf("failed to cleanup: %w", err)
 	}
 
 	slog.Info("done")

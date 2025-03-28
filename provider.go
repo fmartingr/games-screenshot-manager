@@ -75,8 +75,16 @@ func (m *Media) GetSourcePath() string {
 	return m.SourcePath
 }
 
+func (m *Media) SetSourcePath(sourcePath string) {
+	m.SourcePath = sourcePath
+}
+
 func (m *Media) GetSourceURL() string {
 	return m.SourceURL
+}
+
+func (m *Media) SetSourceURL(sourceURL string) {
+	m.SourceURL = sourceURL
 }
 
 func (m *Media) GetDestinationName() string {
@@ -122,7 +130,9 @@ func (m *Media) GetSourceHash() string {
 
 type MediaFile interface {
 	GetSourcePath() string
+	SetSourcePath(sourcePath string)
 	GetSourceURL() string
+	SetSourceURL(sourceURL string)
 	GetSourceHash() string
 	GetDestinationName() string
 	SetDestinationName(destinationName string)

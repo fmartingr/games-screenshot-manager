@@ -148,17 +148,9 @@ func (p *SteamProvider) GetPublishedScreenshots() error {
 			p.gameManager.AddGame(game)
 		}
 
-		var tempFile *os.File
-
-		if !p.config.DryRun {
-			tempFile, err = p.fileManager.DownloadURL(screenshot.FileURL)
-			if err != nil {
-				return fmt.Errorf("error downloading screenshot: %s", err)
-			}
-		}
-
-		media := NewMedia(MediaKindScreenshot, tempFile.Name())
+		media := NewMedia(MediaKindScreenshot, "")
 		dateTimeCreated := time.Unix(int64(screenshot.TimeCreated), 0)
+		media.SetSourceURL(screenshot.FileURL)
 		media.DestinationName = fmt.Sprintf("%s.jpg", dateTimeCreated.Format("2006-01-02_15-04-05"))
 		media.ComparisionFunc = steamGalleryComparisonFunc
 		game.AddScreenshot(media)
