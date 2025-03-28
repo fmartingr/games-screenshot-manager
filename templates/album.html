@@ -109,6 +109,60 @@
             footer {
                 text-align: center;
             }
+
+            /* Lightbox styles */
+            .lightbox {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.9);
+                z-index: 999;
+                padding: 20px;
+                box-sizing: border-box;
+            }
+
+            .lightbox.active {
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                flex-direction: column;
+            }
+
+            .lightbox img,
+            .lightbox video {
+                max-height: 90vh;
+                max-width: 90vw;
+                object-fit: contain;
+            }
+
+            .lightbox .close {
+                position: absolute;
+                top: 20px;
+                right: 20px;
+                color: white;
+                font-size: 30px;
+                cursor: pointer;
+            }
+
+            .lightbox .nav {
+                position: absolute;
+                color: white;
+                font-size: 30px;
+                cursor: pointer;
+                padding: 20px;
+                user-select: none;
+            }
+
+            .lightbox .prev {
+                left: 0;
+            }
+
+            .lightbox .next {
+                right: 0;
+            }
         </style>
     </head>
     <body>
@@ -141,8 +195,8 @@
             {{ end }}
 
             {{ if .Node.Files }}
-            {{ if .Node.Folders}}<hr />{{ end }}
-            <ul class="gallery">
+            {{ if .Node.Folders }}<hr />{{ end }}
+            <ul class="gallery files">
                 {{ range .Node.Files }}
                 <li>
                     <a href="{{ .GetWebPath }}">
@@ -156,12 +210,97 @@
                 </li>
                 {{ end }}
             </ul>
-            {{ end}}
+            {{ end }}
             <footer>
                 <p>{{ .Context.FooterText }}</p>
                 <p>Last updated: {{ .LastUpdated }}</p>
                 <p>Created using <a href="https://github.com/fmartingr/games-screenshot-manager">Games Screenshot Manager</a></p>
             </footer>
         </div>
+        <div class="lightbox">
+            <div class="close">&times;</div>
+            <div class="nav prev">&lt;</div>
+            <div class="nav next">&gt;</div>
+            <div class="content-wrapper"></div>
+        </div>
+        <script>
+            // Handle lightbox gallery
+            document.addEventListener('DOMContentLoaded', () => {
+                const lightbox = document.querySelector('.lightbox');
+                const contentWrapper = lightbox.querySelector('.content-wrapper');
+                const gallery = document.querySelector('.gallery');
+                let currentIndex = 0;
+                let items = [];
+
+                // Get all gallery items
+                function updateItems() {
+                    items = Array.from(gallery.querySelectorAll('.gallery.files li a'));
+                }
+
+                // Show lightbox
+                function showLightbox(index) {
+                    currentIndex = index;
+                    const item = items[currentIndex];
+                    const path = item.href;
+                    const isVideo = item.querySelector('.video') !== null;
+
+                    contentWrapper.innerHTML = isVideo
+                        ? `<video src="${path}" controls autoplay></video>`
+                        : `<img src="${path}" alt="">`;
+
+                    lightbox.classList.add('active');
+                }
+
+                // Close lightbox
+                function closeLightbox() {
+                    lightbox.classList.remove('active');
+                    // Stop video if playing
+                    const video = contentWrapper.querySelector('video');
+                    if (video) {
+                        video.pause();
+                        video.currentTime = 0;
+                    }
+                }
+
+                // Close lightbox with X button
+                lightbox.querySelector('.close').addEventListener('click', closeLightbox);
+
+                // Close on background click
+                lightbox.addEventListener('click', (e) => {
+                    if (e.target === lightbox) {
+                        closeLightbox();
+                    }
+                });
+
+                // Navigate
+                lightbox.querySelector('.prev').addEventListener('click', () => {
+                    currentIndex = (currentIndex - 1 + items.length) % items.length;
+                    showLightbox(currentIndex);
+                });
+
+                lightbox.querySelector('.next').addEventListener('click', () => {
+                    currentIndex = (currentIndex + 1) % items.length;
+                    showLightbox(currentIndex);
+                });
+
+                // Update keyboard handler to use closeLightbox
+                document.addEventListener('keydown', (e) => {
+                    if (!lightbox.classList.contains('active')) return;
+
+                    if (e.key === 'Escape') closeLightbox();
+                    if (e.key === 'ArrowLeft') lightbox.querySelector('.prev').click();
+                    if (e.key === 'ArrowRight') lightbox.querySelector('.next').click();
+                });
+
+                // Initialize gallery clicks
+                updateItems();
+                items.forEach((item, index) => {
+                    item.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        showLightbox(index);
+                    });
+                });
+            });
+        </script>
     </body>
 </html>
