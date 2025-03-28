@@ -249,6 +249,10 @@
                         : `<img src="${path}" alt="">`;
 
                     lightbox.classList.add('active');
+
+                    // Update URL hash without triggering scroll
+                    const filename = path.split('/').pop();
+                    history.replaceState(null, null, `#${filename}`);
                 }
 
                 // Close lightbox
@@ -259,6 +263,26 @@
                     if (video) {
                         video.pause();
                         video.currentTime = 0;
+                    }
+                    // Remove hash from URL without triggering scroll
+                    history.replaceState(null, null, ' ');
+                }
+
+                // Find index by filename
+                function findIndexByFilename(filename) {
+                    return items.findIndex(item => item.href.split('/').pop() === filename);
+                }
+
+                // Handle hash change
+                function handleHashChange() {
+                    const hash = window.location.hash.slice(1); // Remove the # symbol
+                    if (hash) {
+                        const index = findIndexByFilename(hash);
+                        if (index !== -1) {
+                            showLightbox(index);
+                        }
+                    } else {
+                        closeLightbox();
                     }
                 }
 
@@ -283,7 +307,7 @@
                     showLightbox(currentIndex);
                 });
 
-                // Update keyboard handler to use closeLightbox
+                // Handle keyboard navigation
                 document.addEventListener('keydown', (e) => {
                     if (!lightbox.classList.contains('active')) return;
 
@@ -300,6 +324,10 @@
                         showLightbox(index);
                     });
                 });
+
+                // Handle initial hash and hash changes
+                window.addEventListener('hashchange', handleHashChange);
+                handleHashChange(); // Check hash on page load
             });
         </script>
     </body>
