@@ -145,6 +145,7 @@
                 color: white;
                 font-size: 30px;
                 cursor: pointer;
+                z-index: 1000;
             }
 
             .lightbox .nav {
@@ -154,14 +155,29 @@
                 cursor: pointer;
                 padding: 20px;
                 user-select: none;
+                z-index: 1000;
+                background: rgba(0, 0, 0, 0.5);
+                border-radius: 50%;
+                width: 50px;
+                height: 50px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                top: 50%;
+                transform: translateY(-50%);
             }
 
             .lightbox .prev {
-                left: 0;
+                left: 20px;
             }
 
             .lightbox .next {
-                right: 0;
+                right: 20px;
+            }
+
+            /* Add touch feedback */
+            .lightbox .nav:active {
+                background: rgba(0, 0, 0, 0.8);
             }
         </style>
     </head>
@@ -224,13 +240,14 @@
             <div class="content-wrapper"></div>
         </div>
         <script>
-            // Handle lightbox gallery
             document.addEventListener('DOMContentLoaded', () => {
                 const lightbox = document.querySelector('.lightbox');
                 const contentWrapper = lightbox.querySelector('.content-wrapper');
                 const gallery = document.querySelector('.gallery');
                 let currentIndex = 0;
                 let items = [];
+                let touchStartX = 0;
+                let touchEndX = 0;
 
                 // Get all gallery items
                 function updateItems() {
@@ -315,6 +332,41 @@
                     if (e.key === 'ArrowLeft') lightbox.querySelector('.prev').click();
                     if (e.key === 'ArrowRight') lightbox.querySelector('.next').click();
                 });
+
+                // Add touch event handling
+                function handleTouchStart(e) {
+                    touchStartX = e.changedTouches[0].screenX;
+                }
+
+                function handleTouchEnd(e) {
+                    touchEndX = e.changedTouches[0].screenX;
+                    handleSwipe();
+                }
+
+                function handleSwipe() {
+                    const swipeThreshold = 50; // minimum distance for swipe
+                    const diff = touchStartX - touchEndX;
+
+                    if (Math.abs(diff) > swipeThreshold) {
+                        if (diff > 0) {
+                            // Swipe left - next image
+                            currentIndex = (currentIndex + 1) % items.length;
+                        } else {
+                            // Swipe right - previous image
+                            currentIndex = (currentIndex - 1 + items.length) % items.length;
+                        }
+                        showLightbox(currentIndex);
+                    }
+                }
+
+                // Add touch event listeners
+                contentWrapper.addEventListener('touchstart', handleTouchStart, false);
+                contentWrapper.addEventListener('touchend', handleTouchEnd, false);
+
+                // Prevent default touch behavior to avoid scrolling
+                contentWrapper.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                }, { passive: false });
 
                 // Initialize gallery clicks
                 updateItems();
