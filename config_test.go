@@ -14,13 +14,12 @@ func TestConfigLoad(t *testing.T) {
 	testConfigPath := filepath.Join(tmpDir, "test_config.toml")
 
 	testConfig := `
-dry_run = false
 output_path = "test_output"
 [global]
 download_covers = true
 
 [gallery]
-create_web_gallery = true
+create = true
 
 [providers.guild_wars_2]
 path = "test_gw2_path"
@@ -63,7 +62,6 @@ func TestConfigSave(t *testing.T) {
 	// Create a test config
 	config := &Config{
 		OutputPath: "test_output",
-		DryRun:     false,
 		Gallery: GalleryConfig{
 			Create: true,
 		},
@@ -108,7 +106,6 @@ func TestConfigInheritance(t *testing.T) {
 	// Create a test config with inheritance
 	testConfig := `
 output_path = "global_output"
-dry_run = false
 
 [global]
 download_covers = true

@@ -4,9 +4,6 @@
 # This is the destination directory where all screenshots will be copied to
 output_path = "~/Output"
 
-# Enabling this option will run the program without actually modifying any files.
-dry_run = false
-
 # [GLOBAL]
 # This section contains common configuration options for all providers. You can set your defaults here
 # and then override each provider manually.

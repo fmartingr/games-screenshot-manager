@@ -21,7 +21,11 @@ var levelMap = map[string]slog.Level{
 // RunCLI starts the command line interface
 func RunCLI() error {
 	var configPath string
+	var onlyBuildGallery bool
+	var dryRun bool
 	flag.StringVar(&configPath, "config", "", "Path to the configuration file")
+	flag.BoolVar(&onlyBuildGallery, "only-build-gallery", false, "Only build the gallery and avoid processing games")
+	flag.BoolVar(&dryRun, "dry-run", false, "Dry run mode")
 	logLevel := flag.String("log", "info", "Log level")
 	flag.Parse()
 
@@ -51,40 +55,44 @@ func RunCLI() error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
+	config.DryRun = dryRun
+
 	gameManager := NewGameManager()
 	fileManager := NewFileManager(*config)
 
-	registry, err := NewProviderRegistry(config, gameManager, fileManager)
-	if err != nil {
-		return fmt.Errorf("failed to create provider registry: %w", err)
-	}
-
-	if config.DryRun {
-		slog.Info("dry run is enabled, no changes will be made to the files in the system")
-	}
-
-	for _, provider := range registry.Providers {
-		if err := provider.Run(); err != nil {
-			return fmt.Errorf("failed to run provider: %w", err)
+	if !onlyBuildGallery {
+		registry, err := NewProviderRegistry(config, gameManager, fileManager)
+		if err != nil {
+			return fmt.Errorf("failed to create provider registry: %w", err)
 		}
-	}
 
-	if !config.DryRun {
-		for _, game := range gameManager.GetGames() {
-			if err := fileManager.ProcessGame(game); err != nil {
-				slog.Error("failed to process game", "error", err)
+		if dryRun {
+			slog.Info("dry run is enabled, no changes will be made to the files in the system")
+		}
+
+		for _, provider := range registry.Providers {
+			if err := provider.Run(); err != nil {
+				return fmt.Errorf("failed to run provider: %w", err)
 			}
 		}
 
-		if config.Gallery.Create {
-			builder, err := NewGalleryBuilder(*config)
-			if err != nil {
-				return fmt.Errorf("failed to create gallery builder: %w", err)
+		if !dryRun {
+			for _, game := range gameManager.GetGames() {
+				if err := fileManager.ProcessGame(game); err != nil {
+					slog.Error("failed to process game", "error", err)
+				}
 			}
+		}
+	}
 
-			if _, err := builder.Build(); err != nil {
-				return fmt.Errorf("failed to build gallery: %w", err)
-			}
+	if config.Gallery.Create {
+		builder, err := NewGalleryBuilder(*config)
+		if err != nil {
+			return fmt.Errorf("failed to create gallery builder: %w", err)
+		}
+
+		if _, err := builder.Build(); err != nil {
+			return fmt.Errorf("failed to build gallery: %w", err)
 		}
 	}
 

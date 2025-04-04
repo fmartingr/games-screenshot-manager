@@ -16,10 +16,12 @@ func Ptr[T any](v T) *T {
 // Config represents the root configuration structure
 type Config struct {
 	OutputPath string        `toml:"output_path"`
-	DryRun     bool          `toml:"dry_run"`
 	Global     GlobalConfig  `toml:"global"`
 	Gallery    GalleryConfig `toml:"gallery"`
 	Providers  Providers     `toml:"providers"`
+
+	// Dry run is provided via -dry-run CLI flag
+	DryRun bool
 }
 
 func (c *Config) Defaults() {
