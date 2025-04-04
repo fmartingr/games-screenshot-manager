@@ -1,11 +1,11 @@
 package gamesscreenshotmanager
 
 import (
-	"embed"
 	"fmt"
 	"image"
 	"image/jpeg"
 	"image/png"
+	"io/fs"
 	"log/slog"
 	"os"
 	"os/exec"
@@ -15,11 +15,9 @@ import (
 
 	toolkitPaths "git.nakama.town/fmartingr/gotoolkit/paths"
 	toolkitTemplate "git.nakama.town/fmartingr/gotoolkit/template"
+	"github.com/fmartingr/games-screenshot-manager/templates"
 	"golang.org/x/image/draw"
 )
-
-//go:embed templates/*.html
-var Templates embed.FS
 
 type GalleryBuilder struct {
 	Config         Config
@@ -31,7 +29,27 @@ type GalleryBuilder struct {
 }
 
 func NewGalleryBuilder(config Config) (*GalleryBuilder, error) {
-	engine, err := toolkitTemplate.NewEngine(Templates)
+	var templateFS fs.FS
+
+	// If there's a `templates` folder in the path where the config files is, use that
+	userConfigDir, err := os.UserConfigDir()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user config directory: %w", err)
+	}
+	configPath := filepath.Join(userConfigDir, "games-screenshot-manager", "templates")
+
+	if _, err := os.Stat(configPath); !os.IsNotExist(err) {
+		root, err := os.OpenRoot(configPath)
+		if err != nil {
+			return nil, fmt.Errorf("failed to open templates directory: %w", err)
+		}
+
+		templateFS = root.FS()
+	} else {
+		templateFS = templates.Templates
+	}
+
+	engine, err := toolkitTemplate.NewEngine(templateFS)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create template engine: %w", err)
 	}
@@ -51,6 +69,8 @@ func NewGalleryBuilder(config Config) (*GalleryBuilder, error) {
 }
 
 func (b *GalleryBuilder) Build() (*GalleryNode, error) {
+	b.log.Info("building gallery", slog.String("output_path", b.Config.OutputPath))
+
 	outputPath := toolkitPaths.ExpandUser(filepath.Join("./", b.Config.OutputPath))
 
 	b.Root = &GalleryNode{

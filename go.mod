@@ -3,7 +3,7 @@ module github.com/fmartingr/games-screenshot-manager
 go 1.24.1
 
 require (
-	git.nakama.town/fmartingr/gotoolkit v0.2.0
+	git.nakama.town/fmartingr/gotoolkit v0.2.3
 	github.com/barasher/go-exiftool v1.10.0
 	github.com/gosimple/slug v1.15.0
 	github.com/lmittmann/tint v1.0.7

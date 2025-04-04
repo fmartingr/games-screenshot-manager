@@ -1,5 +1,5 @@
-git.nakama.town/fmartingr/gotoolkit v0.2.0 h1:+RUN0lmm/RhD90x3m4gJ62BCcbXekKqrsowJ0XqJUCY=
-git.nakama.town/fmartingr/gotoolkit v0.2.0/go.mod h1:E9XRFr4dWEyw7MaOGVdZf/D9AV0IHyZAXkbL7SiTggM=
+git.nakama.town/fmartingr/gotoolkit v0.2.3 h1:CFgy1tbZbWcUjWEOB7va2fDWfvAlQiBs298IdGNT97A=
+git.nakama.town/fmartingr/gotoolkit v0.2.3/go.mod h1:E9XRFr4dWEyw7MaOGVdZf/D9AV0IHyZAXkbL7SiTggM=
 github.com/barasher/go-exiftool v1.10.0 h1:f5JY5jc42M7tzR6tbL9508S2IXdIcG9QyieEXNMpIhs=
 github.com/barasher/go-exiftool v1.10.0/go.mod h1:F9s/a3uHSM8YniVfwF+sbQUtP8Gmh9nyzigNF+8vsWo=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
