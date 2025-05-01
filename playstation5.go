@@ -91,7 +91,8 @@ func (p *Playstation5Provider) GetScreenshots() error {
 						return nil
 					}
 
-					datetime, err := time.Parse(ps5FilenameLayout, parts[1])
+					// Get the last part which should be the timestamp
+					datetime, err := time.Parse(ps5FilenameLayout, parts[len(parts)-1])
 					if err != nil {
 						p.log.Warn("Error parsing datetime from filename", slog.String("file", fileName), slog.Any("error", err))
 						return nil
