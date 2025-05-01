@@ -205,7 +205,7 @@ func (b *GalleryBuilder) walkFolder(parent *GalleryNode) {
 					slog.Error("failed to generate thumbnail", slog.String("path", node.Path), slog.String("err", err.Error()))
 				}
 			case GalleryNodeKindVideo:
-				cmd := exec.Command("ffmpeg", "-i", node.Path, "-vf", `select=eq(n\,0)`, "-q:v", "3", node.Path+".thumb.jpg")
+				cmd := exec.Command("ffmpeg", "-i", node.Path, "-vf", `select=eq(n\,0)`, "-q:v", "3", "-update", "1", "-frames:v", "1", node.Path+".thumb.jpg")
 				output, err := cmd.CombinedOutput()
 				if err != nil {
 					slog.Error("failed to generate thumb", slog.String("path", node.Path), slog.String("err", err.Error()))
