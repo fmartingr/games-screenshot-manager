@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 
 	toolkitPaths "git.nakama.town/fmartingr/gotoolkit/paths"
 	toolkitTemplate "git.nakama.town/fmartingr/gotoolkit/template"
@@ -84,7 +83,7 @@ func (b *GalleryBuilder) Build() (*GalleryNode, error) {
 
 	b.walkFolder(b.Root)
 
-	b.buildSite(b.Root, time.Now().Format(time.RFC3339))
+	b.buildSite(b.Root)
 
 	return b.Root, nil
 }
@@ -221,9 +220,12 @@ func (b *GalleryBuilder) walkFolder(parent *GalleryNode) {
 	}
 }
 
-func (b *GalleryBuilder) buildSite(node *GalleryNode, lastUpdated string) {
+func (b *GalleryBuilder) buildSite(node *GalleryNode) {
 	switch node.Kind() {
 	case GalleryNodeKindFolder:
+		// Get the last updated time for this specific node
+		lastUpdated := node.GetLastUpdated()
+
 		result, err := b.templateEngine.Render("album.html", map[string]any{
 			"Node":        &node,
 			"LastUpdated": lastUpdated,
@@ -239,7 +241,7 @@ func (b *GalleryBuilder) buildSite(node *GalleryNode, lastUpdated string) {
 		}
 
 		for _, folder := range node.Folders {
-			b.buildSite(folder, lastUpdated)
+			b.buildSite(folder)
 		}
 	}
 }
