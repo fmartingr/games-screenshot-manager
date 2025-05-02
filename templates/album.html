@@ -29,8 +29,11 @@
                 }
             }
 
-            body {
+            * {
                 font-family: monospace;
+            }
+
+            body {
                 background-color: var(--bg-color);
                 color: var(--text-color);
             }
@@ -107,6 +110,32 @@
 
             .gallery li .folder-title {
                 display: block
+            }
+
+            .file-filters {
+                margin: 10px 0;
+                text-align: center;
+            }
+
+            .filter-btn {
+                background-color: var(--bg-color);
+                color: var(--text-color);
+                border: 1px solid var(--text-color);
+                padding: 8px 16px;
+                margin: 0 5px;
+                border-radius: 5px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+
+            .filter-btn:hover {
+                background-color: var(--text-color);
+                color: var(--bg-color);
+            }
+
+            .filter-btn.active {
+                background-color: var(--text-color);
+                color: var(--bg-color);
             }
 
             footer {
@@ -215,9 +244,14 @@
 
             {{ if .Node.Files }}
             {{ if .Node.Folders }}<hr />{{ end }}
+            <div class="file-filters" id="fileFilters" style="display: none;">
+                <button class="filter-btn active" data-filter="all">All</button>
+                <button class="filter-btn" data-filter="image">Screenshots</button>
+                <button class="filter-btn" data-filter="video">Clips</button>
+            </div>
             <ul class="gallery files">
                 {{ range .Node.Files }}
-                <li>
+                <li data-kind="{{ .Kind }}">
                     <a href="{{ .GetWebPath }}">
                         <img src="{{ .GetThumbPath }}" class="preview {{ if eq .Kind "video" }}video{{ end }}" />
                     </a>
@@ -254,13 +288,24 @@
 
                 // Get all gallery items
                 function updateItems() {
-                    items = Array.from(gallery.querySelectorAll('.gallery.files li a'));
+                    items = Array.from(document.querySelectorAll('.gallery.files li:not([style*="display: none"]) a'));
                 }
 
                 // Show lightbox
                 function showLightbox(index) {
+                    if (index < 0 || index >= items.length) {
+                        console.error('Invalid lightbox index:', index, 'items length:', items.length);
+                        return;
+                    }
+                    
                     currentIndex = index;
                     const item = items[currentIndex];
+                    
+                    if (!item || typeof item.href !== 'string') {
+                        console.error('Invalid lightbox item at index:', index, 'item:', item);
+                        return;
+                    }
+                    
                     const path = item.href;
                     const isVideo = item.querySelector('.video') !== null;
 
@@ -316,15 +361,67 @@
                     }
                 });
 
+                // File filtering
+                const filterButtons = document.querySelectorAll('.filter-btn');
+                const fileFilters = document.getElementById('fileFilters');
+                const fileItems = document.querySelectorAll('.gallery.files li');
+
+                // Check if we have multiple file types
+                let hasImages = false;
+                let hasVideos = false;
+
+                fileItems.forEach(item => {
+                    const kind = item.getAttribute('data-kind');
+                    if (kind === 'image') hasImages = true;
+                    if (kind === 'video') hasVideos = true;
+                });
+
+                // Only show filters if we have both images and videos
+                if (hasImages && hasVideos) {
+                    fileFilters.style.display = 'block';
+                }
+
+                filterButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        const filter = button.getAttribute('data-filter');
+
+                        // Update active button
+                        filterButtons.forEach(btn => btn.classList.remove('active'));
+                        button.classList.add('active');
+
+                        // Filter items
+                        fileItems.forEach(item => {
+                            const kind = item.getAttribute('data-kind');
+                            if (filter === 'all' || filter === kind) {
+                                item.style.display = 'block';
+                            } else {
+                                item.style.display = 'none';
+                            }
+                        });
+
+                        // Update lightbox items after filtering
+                        updateItems();
+                        
+                        // Close lightbox if it's open to prevent errors
+                        if (lightbox.classList.contains('active')) {
+                            closeLightbox();
+                        }
+                    });
+                });
+
                 // Navigate
                 lightbox.querySelector('.prev').addEventListener('click', () => {
-                    currentIndex = (currentIndex - 1 + items.length) % items.length;
-                    showLightbox(currentIndex);
+                    if (items.length > 0) {
+                        currentIndex = (currentIndex - 1 + items.length) % items.length;
+                        showLightbox(currentIndex);
+                    }
                 });
 
                 lightbox.querySelector('.next').addEventListener('click', () => {
-                    currentIndex = (currentIndex + 1) % items.length;
-                    showLightbox(currentIndex);
+                    if (items.length > 0) {
+                        currentIndex = (currentIndex + 1) % items.length;
+                        showLightbox(currentIndex);
+                    }
                 });
 
                 // Handle keyboard navigation
@@ -373,11 +470,27 @@
 
                 // Initialize gallery clicks
                 updateItems();
-                items.forEach((item, index) => {
-                    item.addEventListener('click', (e) => {
+                
+                // Use delegated event handling for gallery items
+                gallery.addEventListener('click', (e) => {
+                    // Find closest anchor if clicked on child element
+                    const clickedAnchor = e.target.closest('a');
+                    if (!clickedAnchor) return;
+                    
+                    // Make sure it's a file item (not a folder)
+                    const fileItem = clickedAnchor.closest('.gallery.files li');
+                    if (!fileItem) return;
+                    
+                    // Check if item is visible (not filtered out)
+                    if (window.getComputedStyle(fileItem).display !== 'none') {
                         e.preventDefault();
-                        showLightbox(index);
-                    });
+                        
+                        // Find the index of the clicked item in the current filtered items
+                        const index = items.findIndex(item => item === clickedAnchor);
+                        if (index !== -1) {
+                            showLightbox(index);
+                        }
+                    }
                 });
 
                 // Handle initial hash and hash changes
