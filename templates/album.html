@@ -133,7 +133,28 @@
                 color: var(--bg-color);
             }
 
-            .filter-btn.active {
+            .filter-btn.active, .sort-btn.active {
+                background-color: var(--text-color);
+                color: var(--bg-color);
+            }
+            
+            .sort-controls {
+                display: inline-block;
+                margin-left: 20px;
+            }
+            
+            .sort-btn {
+                background-color: var(--bg-color);
+                color: var(--text-color);
+                border: 1px solid var(--text-color);
+                padding: 8px 16px;
+                margin: 0 2px;
+                border-radius: 5px;
+                cursor: pointer;
+                transition: all 0.3s ease;
+            }
+            
+            .sort-btn:hover {
                 background-color: var(--text-color);
                 color: var(--bg-color);
             }
@@ -248,10 +269,15 @@
                 <button class="filter-btn active" data-filter="all">All</button>
                 <button class="filter-btn" data-filter="image">Screenshots</button>
                 <button class="filter-btn" data-filter="video">Clips</button>
+                <div class="sort-controls">
+                    <span>Sort:</span>
+                    <button class="sort-btn" data-sort="asc">Oldest First</button>
+                    <button class="sort-btn active" data-sort="desc">Newest First</button>
+                </div>
             </div>
             <ul class="gallery files">
                 {{ range .Node.Files }}
-                <li data-kind="{{ .Kind }}">
+                <li data-kind="{{ .Kind }}" data-filename="{{ .Title }}">
                     <a href="{{ .GetWebPath }}">
                         <img src="{{ .GetThumbPath }}" class="preview {{ if eq .Kind "video" }}video{{ end }}" />
                     </a>
@@ -297,15 +323,15 @@
                         console.error('Invalid lightbox index:', index, 'items length:', items.length);
                         return;
                     }
-                    
+
                     currentIndex = index;
                     const item = items[currentIndex];
-                    
+
                     if (!item || typeof item.href !== 'string') {
                         console.error('Invalid lightbox item at index:', index, 'item:', item);
                         return;
                     }
-                    
+
                     const path = item.href;
                     const isVideo = item.querySelector('.video') !== null;
 
@@ -401,7 +427,7 @@
 
                         // Update lightbox items after filtering
                         updateItems();
-                        
+
                         // Close lightbox if it's open to prevent errors
                         if (lightbox.classList.contains('active')) {
                             closeLightbox();
@@ -468,23 +494,70 @@
                     e.preventDefault();
                 }, { passive: false });
 
+                // Sorting functionality
+                const sortButtons = document.querySelectorAll('.sort-btn');
+                let currentSort = 'desc'; // Default to newest first (descending)
+                
+                function sortItems() {
+                    const galleryFiles = document.querySelector('.gallery.files');
+                    const fileItems = Array.from(galleryFiles.querySelectorAll('li'));
+                    
+                    fileItems.sort((a, b) => {
+                        const fileNameA = a.getAttribute('data-filename');
+                        const fileNameB = b.getAttribute('data-filename');
+                        
+                        return currentSort === 'asc' 
+                            ? fileNameA.localeCompare(fileNameB) 
+                            : fileNameB.localeCompare(fileNameA);
+                    });
+                    
+                    fileItems.forEach(item => galleryFiles.appendChild(item));
+                    
+                    // Update lightbox items after sorting
+                    updateItems();
+                }
+                
+                sortButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        const sort = button.getAttribute('data-sort');
+                        
+                        // Update active button
+                        sortButtons.forEach(btn => btn.classList.remove('active'));
+                        button.classList.add('active');
+                        
+                        // Set sort direction
+                        currentSort = sort;
+                        
+                        // Sort the items
+                        sortItems();
+                        
+                        // Close lightbox if it's open to prevent errors
+                        if (lightbox.classList.contains('active')) {
+                            closeLightbox();
+                        }
+                    });
+                });
+                
+                // Initial sort on page load
+                sortItems();
+                
                 // Initialize gallery clicks
                 updateItems();
-                
+
                 // Use delegated event handling for gallery items
                 gallery.addEventListener('click', (e) => {
                     // Find closest anchor if clicked on child element
                     const clickedAnchor = e.target.closest('a');
                     if (!clickedAnchor) return;
-                    
+
                     // Make sure it's a file item (not a folder)
                     const fileItem = clickedAnchor.closest('.gallery.files li');
                     if (!fileItem) return;
-                    
+
                     // Check if item is visible (not filtered out)
                     if (window.getComputedStyle(fileItem).display !== 'none') {
                         e.preventDefault();
-                        
+
                         // Find the index of the clicked item in the current filtered items
                         const index = items.findIndex(item => item === clickedAnchor);
                         if (index !== -1) {
