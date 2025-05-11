@@ -229,16 +229,18 @@ func (p *SteamProvider) GetClips() error {
 func (p *SteamProvider) GetCovers() error {
 	if !p.config.DryRun {
 		for _, game := range p.gameManager.GetGames() {
-			// Download cover using the client
-			tempFile, err := p.client.DownloadGameCover(game.ID)
-			if err != nil {
-				p.log.Error("error downloading cover", slog.String("game_id", game.ID), slog.String("game_name", game.Name), slog.Any("error", err))
-				continue
-			}
+			if game.Provider == "steam" {
+				// Download cover using the client
+				tempFile, err := p.client.DownloadGameCover(game.ID)
+				if err != nil {
+					p.log.Error("error downloading cover", slog.String("game_id", game.ID), slog.String("game_name", game.Name), slog.Any("error", err))
+					continue
+				}
 
-			media := NewMedia(MediaKindCover, tempFile.Name())
-			media.DestinationName = "cover.jpg"
-			p.gameManager.GetGame(game.ID).SetCover(media)
+				media := NewMedia(MediaKindCover, tempFile.Name())
+				media.DestinationName = "cover.jpg"
+				p.gameManager.GetGame(game.ID).SetCover(media)
+			}
 		}
 	}
 
