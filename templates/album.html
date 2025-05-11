@@ -111,7 +111,7 @@
                 align-items: center;
                 gap: 4px;
             }
-            
+
             .gallery li .overlay-video .play-icon {
                 width: 16px;
                 height: 16px;
@@ -119,7 +119,7 @@
                 align-items: center;
                 justify-content: center;
             }
-            
+
             .gallery li .overlay-video .duration {
                 font-size: 12px;
                 white-space: nowrap;
@@ -129,7 +129,7 @@
                 display: block;
                 margin-bottom: 2px;
             }
-            
+
             .gallery li .folder-stats {
                 display: block;
                 font-size: 0.8em;
@@ -162,12 +162,12 @@
                 background-color: var(--text-color);
                 color: var(--bg-color);
             }
-            
+
             .sort-controls {
                 display: inline-block;
                 margin-left: 20px;
             }
-            
+
             .sort-btn {
                 background-color: var(--bg-color);
                 color: var(--text-color);
@@ -178,7 +178,7 @@
                 cursor: pointer;
                 transition: all 0.3s ease;
             }
-            
+
             .sort-btn:hover {
                 background-color: var(--text-color);
                 color: var(--bg-color);
@@ -289,9 +289,9 @@
                                 {{ if and (gt $imageCount 0) (eq $videoCount 0) }}
                                     ({{ $imageCount }} screenshot{{ if ne $imageCount 1 }}s{{ end }})
                                 {{ else if and (eq $imageCount 0) (gt $videoCount 0) }}
-                                    ({{ $videoCount }} video{{ if ne $videoCount 1 }}s{{ end }})
+                                    ({{ $videoCount }} clip{{ if ne $videoCount 1 }}s{{ end }})
                                 {{ else if and (gt $imageCount 0) (gt $videoCount 0) }}
-                                    ({{ $imageCount }} screenshot{{ if ne $imageCount 1 }}s{{ end }} & {{ $videoCount }} video{{ if ne $videoCount 1 }}s{{ end }})
+                                    ({{ $imageCount }} screenshot{{ if ne $imageCount 1 }}s{{ end }} & {{ $videoCount }} clip{{ if ne $videoCount 1 }}s{{ end }})
                                 {{ end }}
                             </span>
                         {{ end }}
@@ -538,50 +538,50 @@
                 // Sorting functionality
                 const sortButtons = document.querySelectorAll('.sort-btn');
                 let currentSort = 'desc'; // Default to newest first (descending)
-                
+
                 function sortItems() {
                     const galleryFiles = document.querySelector('.gallery.files');
                     const fileItems = Array.from(galleryFiles.querySelectorAll('li'));
-                    
+
                     fileItems.sort((a, b) => {
                         const fileNameA = a.getAttribute('data-filename');
                         const fileNameB = b.getAttribute('data-filename');
-                        
-                        return currentSort === 'asc' 
-                            ? fileNameA.localeCompare(fileNameB) 
+
+                        return currentSort === 'asc'
+                            ? fileNameA.localeCompare(fileNameB)
                             : fileNameB.localeCompare(fileNameA);
                     });
-                    
+
                     fileItems.forEach(item => galleryFiles.appendChild(item));
-                    
+
                     // Update lightbox items after sorting
                     updateItems();
                 }
-                
+
                 sortButtons.forEach(button => {
                     button.addEventListener('click', () => {
                         const sort = button.getAttribute('data-sort');
-                        
+
                         // Update active button
                         sortButtons.forEach(btn => btn.classList.remove('active'));
                         button.classList.add('active');
-                        
+
                         // Set sort direction
                         currentSort = sort;
-                        
+
                         // Sort the items
                         sortItems();
-                        
+
                         // Close lightbox if it's open to prevent errors
                         if (lightbox.classList.contains('active')) {
                             closeLightbox();
                         }
                     });
                 });
-                
+
                 // Initial sort on page load
                 sortItems();
-                
+
                 // Initialize gallery clicks
                 updateItems();
 
