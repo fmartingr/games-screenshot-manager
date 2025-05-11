@@ -28,6 +28,10 @@ create = false
 # The title shown in the gallery
 site_title = "Games Screenshots"
 
+# Shows the duration of video clips in the gallery thumbnails
+# Can be disabled to improve performance when generating the gallery
+show_video_duration = true
+
 # Artibrary context available in the template, we provide some defaults the template included uses but
 # leave the room open for future improvements.
 [gallery.context]

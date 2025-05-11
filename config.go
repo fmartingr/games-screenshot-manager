@@ -54,14 +54,16 @@ func (c *GlobalConfig) Defaults() {
 
 // GalleryConfig represents the web gallery configuration
 type GalleryConfig struct {
-	Create    bool              `toml:"create"`
-	SiteTitle string            `toml:"site_title"`
-	Context   map[string]string `toml:"context"`
+	Create            bool              `toml:"create"`
+	SiteTitle         string            `toml:"site_title"`
+	Context           map[string]string `toml:"context"`
+	ShowVideoDuration bool              `toml:"show_video_duration"`
 }
 
 func (c *GalleryConfig) Defaults() {
 	c.Create = false
 	c.SiteTitle = "Video Games Screenshots"
+	c.ShowVideoDuration = true
 
 	if c.Context == nil {
 		c.Context = map[string]string{}

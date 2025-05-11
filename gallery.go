@@ -231,6 +231,7 @@ func (b *GalleryBuilder) buildSite(node *GalleryNode) {
 			"LastUpdated": lastUpdated,
 			"Title":       node.Title,
 			"Context":     b.Config.Gallery.Context,
+			"Config":      &b.Config,
 		})
 		if err != nil {
 			slog.Error("failed to render template", slog.String("path", node.Path), slog.String("err", err.Error()))

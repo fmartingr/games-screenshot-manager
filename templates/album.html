@@ -104,8 +104,23 @@
                 right: 0;
                 top: 0;
                 border-radius: 5px;
+                height: 16px;
+                display: flex;
+                align-items: center;
+                gap: 4px;
+            }
+            
+            .gallery li .overlay-video .play-icon {
                 width: 16px;
                 height: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            
+            .gallery li .overlay-video .duration {
+                font-size: 12px;
+                white-space: nowrap;
             }
 
             .gallery li .folder-title {
@@ -283,7 +298,10 @@
                     </a>
                     {{ if eq .Kind "video" }}
                     <div class="overlay-video">
-                        <span>&#9654;</span>
+                        <div class="play-icon"><span>&#9654;</span></div>
+                        {{ if .GetFormattedVideoDuration $.Config }}
+                        <span class="duration">{{ .GetFormattedVideoDuration $.Config }}</span>
+                        {{ end }}
                     </div>
                     {{ end }}
                 </li>

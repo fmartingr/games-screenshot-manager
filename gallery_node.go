@@ -1,10 +1,13 @@
 package gamesscreenshotmanager
 
 import (
+	"fmt"
 	"log/slog"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -98,6 +101,59 @@ func (n *GalleryNode) GetVideoCount() int {
 		}
 	}
 	return count
+}
+
+// GetVideoDuration returns the duration of a video file in seconds
+// Returns 0 if the file is not a video or if there's an error getting the duration
+func (n *GalleryNode) GetVideoDuration() float64 {
+	if n.Kind() != GalleryNodeKindVideo {
+		return 0
+	}
+
+	// Use ffprobe to get the duration
+	cmd := exec.Command("ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", n.Path)
+	output, err := cmd.Output()
+	if err != nil {
+		slog.Error("failed to get video duration", slog.String("path", n.Path), slog.String("err", err.Error()))
+		return 0
+	}
+
+	duration, err := strconv.ParseFloat(strings.TrimSpace(string(output)), 64)
+	if err != nil {
+		slog.Error("failed to parse video duration", slog.String("path", n.Path), slog.String("err", err.Error()))
+		return 0
+	}
+
+	return duration
+}
+
+// GetFormattedVideoDuration returns the duration of a video file formatted as:
+// - "HH:MM" if the duration is 1 minute or longer
+// - "XXs" if the duration is less than 1 minute
+// Returns an empty string if the file is not a video, if there's an error, or if
+// show_video_duration is disabled in the configuration
+func (n *GalleryNode) GetFormattedVideoDuration(config *Config) string {
+	// If showing video duration is disabled, return empty string
+	if config != nil && !config.Gallery.ShowVideoDuration {
+		return ""
+	}
+
+	duration := n.GetVideoDuration()
+	if duration <= 0 {
+		return ""
+	}
+
+	// Less than 1 minute: format as "XXs"
+	if duration < 60 {
+		return fmt.Sprintf("%ds", int(duration))
+	}
+
+	// 1 minute or longer: format as "HH:MM"
+	minutes := int(duration) / 60
+	hours := minutes / 60
+	minutes = minutes % 60
+
+	return fmt.Sprintf("%02d:%02d", hours, minutes)
 }
 
 func (n *GalleryNode) GetFolderCount() int {
