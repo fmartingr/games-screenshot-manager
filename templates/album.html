@@ -19,6 +19,7 @@
                 --bg-color: #ffffff;
                 --text-color: #000000;
                 --shadow-color: rgba(0, 0, 0, 0.5);
+                --muted-text-color: #777777;
             }
 
             @media (prefers-color-scheme: dark) {
@@ -26,6 +27,7 @@
                     --bg-color: #1a1a1a;
                     --text-color: #ffffff;
                     --shadow-color: rgba(0, 0, 0, 0.8);
+                    --muted-text-color: #aaaaaa;
                 }
             }
 
@@ -124,7 +126,15 @@
             }
 
             .gallery li .folder-title {
-                display: block
+                display: block;
+                margin-bottom: 2px;
+            }
+            
+            .gallery li .folder-stats {
+                display: block;
+                font-size: 0.8em;
+                color: var(--muted-text-color);
+                margin-top: 2px;
             }
 
             .file-filters {
@@ -272,6 +282,19 @@
                     <a href="{{ .GetWebPath }}">
                         <img src="{{ .GetWebCoverPath }}" alt="{{ .Title }}" class="preview" />
                         <span class="folder-title">{{ .Title }}</span>
+                        {{ $imageCount := .GetImageCount }}
+                        {{ $videoCount := .GetVideoCount }}
+                        {{ if or (gt $imageCount 0) (gt $videoCount 0) }}
+                            <span class="folder-stats">
+                                {{ if and (gt $imageCount 0) (eq $videoCount 0) }}
+                                    ({{ $imageCount }} screenshot{{ if ne $imageCount 1 }}s{{ end }})
+                                {{ else if and (eq $imageCount 0) (gt $videoCount 0) }}
+                                    ({{ $videoCount }} video{{ if ne $videoCount 1 }}s{{ end }})
+                                {{ else if and (gt $imageCount 0) (gt $videoCount 0) }}
+                                    ({{ $imageCount }} screenshot{{ if ne $imageCount 1 }}s{{ end }} & {{ $videoCount }} video{{ if ne $videoCount 1 }}s{{ end }})
+                                {{ end }}
+                            </span>
+                        {{ end }}
                     </a>
                 </li>
                 {{ end }} {{ end }}
