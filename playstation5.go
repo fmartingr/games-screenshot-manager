@@ -98,6 +98,12 @@ func (p *Playstation5Provider) GetScreenshots() error {
 						return nil
 					}
 
+					if extension == ".webm" {
+						// Adjust the datetime by subtracting the video duration
+						// PS5 video filenames contain the end time of the clip, not the start time
+						datetime = AdjustDatetimeByVideoDuration(datetime, filePath)
+					}
+
 					destinationName = datetime.Format(DatetimeFormat)
 					if extension == ".jpg" {
 						mediaKind = MediaKindScreenshot
