@@ -61,6 +61,7 @@ func NewGalleryBuilder(config Config) (*GalleryBuilder, error) {
 			".DS_Store",
 			"index.html",
 			"*.thumb.jpg",
+			"*.metadata.json",
 		},
 		fileManager: NewFileManager(config),
 		log:         slog.Default().With("component", "gallery"),
