@@ -18,12 +18,11 @@ import (
 )
 
 const (
-	steamAppListURL    = "https://api.steampowered.com/ISteamApps/GetAppList/v2/"
+	steamAppListURL    = "https://api.steampowered.com/IStoreService/GetAppList/v1/"
 	steamGameHeaderURL = "https://cdn.cloudflare.steamstatic.com/steam/apps/%s/header.jpg"
 
 	// API endpoints for published screenshots
 	steamGetPublishedFilesURL = "https://api.steampowered.com/IPublishedFileService/GetUserFiles/v1/"
-	steamGetFileDetailsURL    = "https://api.steampowered.com/IPublishedFileService/GetUserFiles/v1/"
 
 	// Steam content types
 	steamContentTypeScreenshot = "4"
@@ -111,7 +110,10 @@ func (s *SteamAppList) GetGameID(gameName string) string {
 }
 
 type SteamAppListResponse struct {
-	AppList SteamAppList `json:"applist"`
+	Response struct {
+		Apps      []SteamApp `json:"apps"`
+		LastAppID uint64     `json:"last_appid,omitempty"`
+	} `json:"response"`
 }
 
 // SteamClient handles API interactions with Steam
@@ -124,7 +126,8 @@ type SteamClient struct {
 }
 
 // NewSteamClient creates a new Steam client
-func NewSteamClient(fileManager *FileManager) (*SteamClient, error) {
+// apiKey is optional but required for downloading the app list (the endpoint requires authentication)
+func NewSteamClient(fileManager *FileManager, apiKey string) (*SteamClient, error) {
 	steamCache, err := cache.NewFileCache("games-screenshot-manager")
 	if err != nil {
 		return nil, fmt.Errorf("error creating file cache: %s", err)
@@ -134,6 +137,7 @@ func NewSteamClient(fileManager *FileManager) (*SteamClient, error) {
 		log:         slog.Default().With("component", "steam-client"),
 		cache:       steamCache,
 		fileManager: fileManager,
+		apiKey:      apiKey,
 	}
 
 	if err := client.DownloadSteamAppList(); err != nil {
@@ -164,13 +168,34 @@ func (c *SteamClient) DownloadSteamAppList() error {
 	}
 
 	if result != nil {
+		c.log.Debug("Using cached Steam app list", slog.String("cache_key", cacheKey))
 		download = false
 		payload = result.([]byte)
+	} else {
+		c.log.Debug("Cache miss, will download Steam app list", slog.String("cache_key", cacheKey))
 	}
 
 	if download {
+		if c.apiKey == "" {
+			return fmt.Errorf("Steam API key is required to download app list. The ISteamApps/GetAppList endpoint has been deprecated and replaced with IStoreService/GetAppList which requires authentication")
+		}
+
 		c.log.Info("Downloading Steam APP List, used to get all game IDs and Names")
-		parsedURL, _ := url.Parse(steamAppListURL)
+
+		// Build URL with API key parameter
+		parsedURL, urlErr := url.Parse(steamAppListURL)
+		if urlErr != nil {
+			return fmt.Errorf("error parsing Steam APP List URL: %s", urlErr)
+		}
+
+		// Add API key as query parameter
+		queryParams := parsedURL.Query()
+		queryParams.Set("key", c.apiKey)
+		parsedURL.RawQuery = queryParams.Encode()
+
+		fullURL := parsedURL.String()
+		c.log.Debug("Making request to Steam API", slog.String("url", fullURL), slog.String("base_url", steamAppListURL))
+
 		request := http.Request{
 			Method: "GET",
 			URL:    parsedURL,
@@ -189,27 +214,67 @@ func (c *SteamClient) DownloadSteamAppList() error {
 			defer response.Body.Close()
 		}
 
+		c.log.Debug("Steam API response received",
+			slog.Int("status_code", response.StatusCode),
+			slog.String("status", response.Status),
+			slog.String("content_type", response.Header.Get("Content-Type")))
+
+		if response.StatusCode < 200 || response.StatusCode >= 300 {
+			// Read body to include in error message
+			bodyBytes, _ := io.ReadAll(response.Body)
+			bodyPreview := string(bodyBytes)
+			if len(bodyPreview) > 500 {
+				bodyPreview = bodyPreview[:500]
+			}
+			return fmt.Errorf("HTTP error: status code %d, status: %s. Response body: %s", response.StatusCode, response.Status, bodyPreview)
+		}
+
 		payload, err = io.ReadAll(response.Body)
 		if err != nil {
 			return fmt.Errorf("error reading steam response: %s", err)
 		}
+
+		c.log.Debug("Response body read",
+			slog.Int("body_length", len(payload)),
+			slog.String("preview", func() string {
+				if len(payload) > 300 {
+					return string(payload[:300])
+				}
+				return string(payload)
+			}()))
 
 		if err := c.cache.Set(cacheKey, payload, cache.WithTTL(24*time.Hour)); err != nil {
 			return fmt.Errorf("error caching steam app list: %s", err)
 		}
 	}
 
+	c.log.Debug("Attempting to parse JSON response", slog.Int("payload_length", len(payload)))
+
 	steamListResponse := SteamAppListResponse{}
 	jsonErr := json.Unmarshal(payload, &steamListResponse)
 	if jsonErr != nil {
-		return fmt.Errorf("error unmarshalling steam's response: %s", jsonErr)
+		// Try to provide more helpful error message
+		preview := string(payload)
+		if len(preview) > 500 {
+			preview = preview[:500]
+		}
+		c.log.Error("Failed to unmarshal Steam API response",
+			slog.Any("error", jsonErr),
+			slog.String("preview", preview))
+		return fmt.Errorf("error unmarshalling steam's response: %s. Response preview: %s", jsonErr, preview)
 	}
 
-	if len(steamListResponse.AppList.Apps) == 0 {
+	c.log.Debug("Successfully parsed Steam API response",
+		slog.Int("apps_count", len(steamListResponse.Response.Apps)),
+		slog.Uint64("last_app_id", steamListResponse.Response.LastAppID))
+
+	if len(steamListResponse.Response.Apps) == 0 {
 		return fmt.Errorf("coulnd't get steam app list")
 	}
 
-	c.steamApps = steamListResponse.AppList
+	c.steamApps = SteamAppList{
+		Apps: steamListResponse.Response.Apps,
+	}
 
 	return nil
 }

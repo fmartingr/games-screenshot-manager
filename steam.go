@@ -28,14 +28,15 @@ type SteamProvider struct {
 }
 
 func NewSteamProvider(config Config, gameManager *GameManager, fileManager *FileManager) (*SteamProvider, error) {
-	client, err := NewSteamClient(fileManager)
-	if err != nil {
-		return nil, fmt.Errorf("error creating steam client: %s", err)
+	// Validate that API key is set if Steam provider is enabled
+	if config.Providers.Steam.IsEnabled() && config.Providers.Steam.APIKey == "" {
+		return nil, fmt.Errorf("steam provider is enabled but API key is not set. The Steam app list endpoint requires authentication. Please set 'api_key' in the [providers.steam] section of your config file")
 	}
 
-	// Set API key if provided in config
-	if config.Providers.Steam.APIKey != "" {
-		client.SetAPIKey(config.Providers.Steam.APIKey)
+	// Pass API key to NewSteamClient since it's now required for downloading app list
+	client, err := NewSteamClient(fileManager, config.Providers.Steam.APIKey)
+	if err != nil {
+		return nil, fmt.Errorf("error creating steam client: %s", err)
 	}
 
 	steamProvider := &SteamProvider{
