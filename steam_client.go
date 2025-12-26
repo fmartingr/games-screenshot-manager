@@ -182,68 +182,137 @@ func (c *SteamClient) DownloadSteamAppList() error {
 
 		c.log.Info("Downloading Steam APP List, used to get all game IDs and Names")
 
-		// Build URL with API key parameter
-		parsedURL, urlErr := url.Parse(steamAppListURL)
-		if urlErr != nil {
-			return fmt.Errorf("error parsing Steam APP List URL: %s", urlErr)
-		}
+		// Collect all apps from all pages
+		var allApps []SteamApp
+		lastAppID := uint64(0)
+		page := 1
+		const maxResults = 50000 // Maximum allowed by Steam API
 
-		// Add API key as query parameter
-		queryParams := parsedURL.Query()
-		queryParams.Set("key", c.apiKey)
-		parsedURL.RawQuery = queryParams.Encode()
+		for {
+			c.log.Debug("Fetching Steam app list page",
+				slog.Int("page", page),
+				slog.Uint64("last_app_id", lastAppID),
+				slog.Int("apps_collected", len(allApps)))
 
-		fullURL := parsedURL.String()
-		c.log.Debug("Making request to Steam API", slog.String("url", fullURL), slog.String("base_url", steamAppListURL))
-
-		request := http.Request{
-			Method: "GET",
-			URL:    parsedURL,
-			Header: map[string][]string{
-				"User-Agent": {"github.com/fmartingr/games-screenshot-manager"},
-			},
-			ProtoMajor: 2,
-			ProtoMinor: 1,
-		}
-		response, err := http.DefaultClient.Do(&request)
-		if err != nil {
-			return fmt.Errorf("error making request for Steam APP List: %s", err)
-		}
-
-		if response.Body != nil {
-			defer response.Body.Close()
-		}
-
-		c.log.Debug("Steam API response received",
-			slog.Int("status_code", response.StatusCode),
-			slog.String("status", response.Status),
-			slog.String("content_type", response.Header.Get("Content-Type")))
-
-		if response.StatusCode < 200 || response.StatusCode >= 300 {
-			// Read body to include in error message
-			bodyBytes, _ := io.ReadAll(response.Body)
-			bodyPreview := string(bodyBytes)
-			if len(bodyPreview) > 500 {
-				bodyPreview = bodyPreview[:500]
+			// Build URL with API key and pagination parameters
+			parsedURL, urlErr := url.Parse(steamAppListURL)
+			if urlErr != nil {
+				return fmt.Errorf("error parsing Steam APP List URL: %s", urlErr)
 			}
-			return fmt.Errorf("HTTP error: status code %d, status: %s. Response body: %s", response.StatusCode, response.Status, bodyPreview)
-		}
 
-		payload, err = io.ReadAll(response.Body)
-		if err != nil {
-			return fmt.Errorf("error reading steam response: %s", err)
-		}
+			queryParams := parsedURL.Query()
+			queryParams.Set("key", c.apiKey)
+			queryParams.Set("max_results", strconv.Itoa(maxResults))
+			if lastAppID > 0 {
+				queryParams.Set("last_appid", strconv.FormatUint(lastAppID, 10))
+			}
+			parsedURL.RawQuery = queryParams.Encode()
 
-		c.log.Debug("Response body read",
-			slog.Int("body_length", len(payload)),
-			slog.String("preview", func() string {
-				if len(payload) > 300 {
-					return string(payload[:300])
+			fullURL := parsedURL.String()
+			c.log.Debug("Making request to Steam API", slog.String("url", fullURL))
+
+			request := http.Request{
+				Method: "GET",
+				URL:    parsedURL,
+				Header: map[string][]string{
+					"User-Agent": {"github.com/fmartingr/games-screenshot-manager"},
+				},
+				ProtoMajor: 2,
+				ProtoMinor: 1,
+			}
+			response, err := http.DefaultClient.Do(&request)
+			if err != nil {
+				return fmt.Errorf("error making request for Steam APP List (page %d): %s", page, err)
+			}
+
+			if response.Body != nil {
+				defer response.Body.Close()
+			}
+
+			c.log.Debug("Steam API response received",
+				slog.Int("page", page),
+				slog.Int("status_code", response.StatusCode),
+				slog.String("status", response.Status),
+				slog.String("content_type", response.Header.Get("Content-Type")))
+
+			if response.StatusCode < 200 || response.StatusCode >= 300 {
+				// Read body to include in error message
+				bodyBytes, _ := io.ReadAll(response.Body)
+				bodyPreview := string(bodyBytes)
+				if len(bodyPreview) > 500 {
+					bodyPreview = bodyPreview[:500]
 				}
-				return string(payload)
-			}()))
+				return fmt.Errorf("HTTP error on page %d: status code %d, status: %s. Response body: %s", page, response.StatusCode, response.Status, bodyPreview)
+			}
 
-		if err := c.cache.Set(cacheKey, payload, cache.WithTTL(24*time.Hour)); err != nil {
+			pagePayload, err := io.ReadAll(response.Body)
+			if err != nil {
+				return fmt.Errorf("error reading steam response (page %d): %s", page, err)
+			}
+
+			// Parse this page's response
+			var pageResponse SteamAppListResponse
+			if err := json.Unmarshal(pagePayload, &pageResponse); err != nil {
+				preview := string(pagePayload)
+				if len(preview) > 500 {
+					preview = preview[:500]
+				}
+				return fmt.Errorf("error unmarshalling steam's response (page %d): %s. Response preview: %s", page, err, preview)
+			}
+
+			// Check if we got any apps
+			if len(pageResponse.Response.Apps) == 0 {
+				c.log.Debug("No apps in response, stopping pagination", slog.Int("page", page))
+				break
+			}
+
+			// Add apps from this page to our collection
+			allApps = append(allApps, pageResponse.Response.Apps...)
+			c.log.Debug("Page fetched successfully",
+				slog.Int("page", page),
+				slog.Int("apps_in_page", len(pageResponse.Response.Apps)),
+				slog.Int("total_apps", len(allApps)),
+				slog.Uint64("last_app_id", pageResponse.Response.LastAppID))
+
+			// Check if there are more pages
+			if pageResponse.Response.LastAppID == 0 {
+				c.log.Debug("Last app ID is 0, no more pages", slog.Int("page", page))
+				break
+			}
+
+			lastAppID = pageResponse.Response.LastAppID
+			page++
+
+			// Safety limit to prevent infinite loops
+			if page > 100 {
+				c.log.Warn("Reached maximum page limit (100), stopping pagination", slog.Int("total_apps", len(allApps)))
+				break
+			}
+		}
+
+		// Create combined response
+		combinedResponse := SteamAppListResponse{
+			Response: struct {
+				Apps      []SteamApp `json:"apps"`
+				LastAppID uint64     `json:"last_appid,omitempty"`
+			}{
+				Apps:      allApps,
+				LastAppID: 0, // Set to 0 to indicate complete list
+			},
+		}
+
+		// Marshal combined response to JSON for caching
+		payload, err = json.Marshal(combinedResponse)
+		if err != nil {
+			return fmt.Errorf("error marshalling combined Steam app list: %s", err)
+		}
+
+		c.log.Info("Successfully downloaded all Steam app list pages",
+			slog.Int("total_pages", page),
+			slog.Int("total_apps", len(allApps)))
+
+		// Cache the complete combined response for 1 week
+		if err := c.cache.Set(cacheKey, payload, cache.WithTTL(7*24*time.Hour)); err != nil {
 			return fmt.Errorf("error caching steam app list: %s", err)
 		}
 	}
