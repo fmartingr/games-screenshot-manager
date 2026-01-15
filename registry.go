@@ -71,6 +71,15 @@ func (r *ProviderRegistry) registerProviders() error {
 		r.registerProvider("minecraft", minecraftProvider)
 	}
 
+	if r.config.Providers.Hytale.IsEnabled() {
+		hytaleProvider, err := NewHytaleProvider(*r.config, r.gameManager, r.fileManager)
+		if err != nil {
+			return fmt.Errorf("failed to create hytale provider: %w", err)
+		}
+
+		r.registerProvider("hytale", hytaleProvider)
+	}
+
 	if r.config.Providers.PlayStation4.IsEnabled() {
 		playstation4Provider, err := NewPlaystation4Provider(*r.config, r.gameManager, r.fileManager)
 		if err != nil {

@@ -9,6 +9,7 @@ A simple tool to collect and sort games screenshots from different platforms.
 - Collect screenshots taken from different platforms/games. See [Supported providers](#supported-providers) for the list of supported providers.
   - **Steam**
   - **Guild Wars 2**
+  - **Hytale**
   - **Minecraft**
   - **PlayStation 4**
   - **PlayStation 5**
@@ -56,6 +57,14 @@ If no `-config` flag is provided, the binary will look for a `config.toml` file 
 - **Screenshots**: Yes
 - **Clips**: Not supported by the game
 - **Recordings**: Not supported by the game
+
+### Hytale
+
+- **Supported platforms**: macOS, Linux
+- **Screenshots**: Yes
+- **Clips**: Not supported by the game
+- **Recordings**: Not supported by the game
+- **Covers**: Yes, provided by us.
 
 ### Minecraft
 

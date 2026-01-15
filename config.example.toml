@@ -72,6 +72,15 @@ enabled = false
 # 'auto' will try to guess the path based on the platform.
 path = "auto"
 
+# HYTALE
+[providers.hytale]
+# Enable/disable the provider.
+enabled = false
+
+# This option will specify the path to the screenshots folder.
+# 'auto' will try to guess the path based on the platform.
+path = "auto"
+
 # PLAYSTATION 4
 [providers.playstation4]
 # Enable/disable the provider.
