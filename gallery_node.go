@@ -47,11 +47,42 @@ func (n *GalleryNode) Kind() GalleryNodeKind {
 }
 
 func (n *GalleryNode) GetWebPath() string {
-	u, err := url.JoinPath("/", strings.Replace(n.Path, "?", "%3F", -1))
-	if err != nil {
-		slog.Error("failed to join web path", slog.String("path", n.Path), slog.String("err", err.Error()))
+	// Clean the path and remove leading "./"
+	cleanPath := filepath.Clean(n.Path)
+	if cleanPath == "." {
+		return "/"
 	}
-	return u
+
+	// Remove leading "./" if present
+	cleanPath = strings.TrimPrefix(cleanPath, ".")
+	cleanPath = strings.TrimPrefix(cleanPath, string(filepath.Separator))
+
+	// Split path into segments
+	segments := strings.Split(cleanPath, string(filepath.Separator))
+
+	// Encode each segment
+	encodedSegments := make([]string, 0, len(segments))
+	for _, segment := range segments {
+		if segment != "" {
+			encodedSegments = append(encodedSegments, url.PathEscape(segment))
+		}
+	}
+
+	// Join with "/" and add leading "/"
+	if len(encodedSegments) == 0 {
+		return "/"
+	}
+
+	webPath := "/" + strings.Join(encodedSegments, "/")
+
+	// Add trailing slash for folders to signal directory paths
+	// This helps browsers/servers treat them as directories rather than
+	// potentially interpreting special characters as URL syntax (e.g., ? as query string)
+	if n.Kind() == GalleryNodeKindFolder {
+		webPath += "/"
+	}
+
+	return webPath
 }
 
 func (n *GalleryNode) GetThumbPath() string {
@@ -62,11 +93,16 @@ func (n *GalleryNode) GetWebCoverPath() string {
 	if n.Cover == "" {
 		return ""
 	}
-	u, err := url.JoinPath(n.GetWebPath(), n.Cover)
-	if err != nil {
-		slog.Error("failed to join cover path", slog.String("path", n.GetWebPath()), slog.String("err", err.Error()))
+	// Encode the cover filename and append to already-encoded web path
+	encodedCover := url.PathEscape(n.Cover)
+	webPath := n.GetWebPath()
+
+	// GetWebPath() already includes trailing slash for folders
+	// Don't add another slash to avoid double slashes
+	if strings.HasSuffix(webPath, "/") {
+		return webPath + encodedCover
 	}
-	return u
+	return webPath + "/" + encodedCover
 }
 
 func (n *GalleryNode) Empty() bool {
