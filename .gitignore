@@ -7,5 +7,5 @@ Output*
 Input*
 config.toml
 **/*.metadata.json
-
+/testdata
 **/.claude/settings.local.json
