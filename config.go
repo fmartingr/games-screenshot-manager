@@ -112,14 +112,14 @@ func (pc *ProviderConfig) Merge(global *GlobalConfig) {
 // SteamConfig represents the Steam-specific configuration
 type SteamConfig struct {
 	ProviderConfig
-	UserDataPath      string            `toml:"userdata_path"`
-	RecordingsPath    string            `toml:"recordings_path"`
-	ProcessRecordings bool              `toml:"process_recordings"`
-	ProcessClips      bool              `toml:"process_clips"`
-	OnlineGallery     bool              `toml:"online_gallery"`
-	UserID            string            `toml:"user_id"`
-	APIKey            string            `toml:"api_key"`
-	CustomGames       map[string]string `toml:"custom_games"`
+	UserDataPath     string            `toml:"userdata_path"`
+	RecordingsPath   string            `toml:"recordings_path"`
+	EnableRecordings bool              `toml:"enable_recordings"`
+	ProcessClips     bool              `toml:"process_clips"`
+	OnlineGallery    bool              `toml:"online_gallery"`
+	UserID           string            `toml:"user_id"`
+	APIKey           string            `toml:"api_key"`
+	CustomGames      map[string]string `toml:"custom_games"`
 }
 
 func (c *SteamConfig) GetPath() string {
@@ -135,7 +135,7 @@ func (c *SteamConfig) ShouldProcessClips() bool {
 }
 
 func (c *SteamConfig) ShouldProcessRecordings() bool {
-	return c.ProcessRecordings
+	return c.EnableRecordings
 }
 
 // NewConfig creates a new Config instance from a TOML file

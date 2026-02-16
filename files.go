@@ -79,7 +79,7 @@ func (f *FileManager) ProcessMedia(game *Game, media MediaFile) error {
 
 	destinationPath := f.GetPathForGame(game)
 	if media.GetKind() == MediaKindRecording {
-		destinationPath = filepath.Join(destinationPath, "recordings")
+		destinationPath = filepath.Join(destinationPath, "Recordings")
 	}
 
 	// Check if folder exists (create otherwise)

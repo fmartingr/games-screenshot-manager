@@ -219,10 +219,6 @@ func (p *SteamProvider) GetScreenshots() error {
 	return nil
 }
 
-func (p *SteamProvider) GetRecordings() error {
-	return nil
-}
-
 func (p *SteamProvider) GetClips() error {
 	return nil
 }

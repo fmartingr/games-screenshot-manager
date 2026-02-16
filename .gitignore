@@ -6,6 +6,7 @@ dist/
 Output*
 Input*
 config.toml
+config.local.toml
 **/*.metadata.json
 /testdata
 **/.claude/settings.local.json

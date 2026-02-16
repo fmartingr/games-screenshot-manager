@@ -72,6 +72,7 @@ func TestConfigSave(t *testing.T) {
 			Steam: SteamConfig{
 				UserDataPath:   "test_steam_userdata",
 				RecordingsPath: "test_steam_recordings",
+				EnableRecordings: false,
 				CustomGames: map[string]string{
 					"1234567890": "Test Game",
 				},
