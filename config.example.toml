@@ -118,10 +118,12 @@ user_id = ""
 # This option will specify the Steam API key. Get yours at https://steamcommunity.com/dev/apikey
 api_key = ""
 
-# This option will specify names to use for games that are not in the Steam store in the format:
+# This option will specify names to use for games in the format:
 # "game id" = "Game name"
-# This is useful for games that are not in the Steam store, like games you install on Steam to play with Proton or when
-# you use Steam to launch other platforms games (Lutris, Epic Games Store, etc) to get screenshots from them.
+# A name set here always takes precedence over the default Steam store name, so you can use it to both:
+#   - Override the default name of a game that is in the Steam store.
+#   - Name games that are not in the Steam store, like games you install on Steam to play with Proton or when
+#     you use Steam to launch other platforms games (Lutris, Epic Games Store, etc) to get screenshots from them.
 [providers.steam.custom_games]
 "1234567890" = "Custom Game"
 

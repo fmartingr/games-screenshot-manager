@@ -134,13 +134,13 @@ func (p *SteamProvider) GetPublishedScreenshots() error {
 			}
 		}
 
-		gameName := p.client.GetGameName(strconv.Itoa(screenshot.AppID))
+		appIDString := fmt.Sprintf("%d", screenshot.AppID)
+
+		gameName := p.resolveGameName(appIDString)
 		if gameName == "" {
 			p.log.Warn("No game name found for app ID, using app ID as game name", slog.Int("app_id", screenshot.AppID))
-			gameName = strconv.Itoa(screenshot.AppID)
+			gameName = appIDString
 		}
-
-		appIDString := fmt.Sprintf("%d", screenshot.AppID)
 
 		// Create or get existing game
 		game := p.gameManager.GetGame(appIDString)
@@ -182,11 +182,7 @@ func (p *SteamProvider) GetScreenshots() error {
 		}
 
 		for _, file := range files {
-			gameName := p.client.GetGameName(file.Name())
-
-			if gameName == "" && p.steamConfig.CustomGames[file.Name()] != "" {
-				gameName = p.steamConfig.CustomGames[file.Name()]
-			}
+			gameName := p.resolveGameName(file.Name())
 
 			// If game name is empty, use the folder name
 			if gameName == "" {
@@ -250,6 +246,19 @@ func (p *SteamProvider) GetCovers() error {
 
 func (p *SteamProvider) FindGames(options SteamConfig) ([]Game, error) {
 	return nil, nil
+}
+
+// resolveGameName returns the name to use for a given Steam game/folder ID.
+// A name configured in [providers.steam.custom_games] always takes precedence,
+// which allows overriding the default Steam store name as well as naming games
+// that are not in the Steam store. It falls back to the Steam app list name and
+// returns an empty string if neither is available.
+func (p *SteamProvider) resolveGameName(gameID string) string {
+	if name := p.steamConfig.CustomGames[gameID]; name != "" {
+		return name
+	}
+
+	return p.client.GetGameName(gameID)
 }
 
 // getSteamBasePath returns the base path for the Steam installation
