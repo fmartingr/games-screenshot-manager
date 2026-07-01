@@ -82,9 +82,13 @@ func (p *GuildWars2Provider) GetScreenshots() error {
 	game := NewGame(gw2ID, gw2Name, gw2PlatformName, gw2Name)
 
 	for _, file := range files {
+		if file.IsDir() {
+			continue
+		}
+
 		fullPath := filepath.Join(path, file.Name())
 
-		if strings.Contains(file.Name(), gw2Extension) {
+		if strings.EqualFold(filepath.Ext(file.Name()), gw2Extension) {
 			exifTags, err := GetExifTagsWithTool(et, fullPath)
 			if err != nil {
 				p.log.Error("error retrieving exif tags", slog.Any("err", err), slog.String("file", fullPath))
@@ -102,6 +106,11 @@ func (p *GuildWars2Provider) GetScreenshots() error {
 			media.DestinationName = destinationName
 			game.AddScreenshot(media)
 		}
+	}
+
+	// Only add game if it has screenshots
+	if len(game.Screenshots) > 0 {
+		p.gameManager.AddGame(game)
 	}
 
 	return nil
