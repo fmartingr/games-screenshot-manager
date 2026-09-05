@@ -9,7 +9,7 @@
         <meta property="og:title" content="{{ .Title }}" />
         <meta property="og:type" content="website" />
         {{ if .Node.Parent }}
-        <meta property="og:url" content="{{ .Context.SiteURL }}/{{ .Node.Path }}/" />
+        <meta property="og:url" content="{{ .Context.SiteURL }}{{ .Node.GetWebPath }}" />
         <meta property="og:image" content="{{ .Context.SiteURL }}{{ .Node.GetWebCoverPath }}" />
         <meta property="og:description" content="{{ .Context.Author }}'s screenshots for {{ .Title }}" />
         {{ end }}

@@ -160,35 +160,151 @@ func (b *GalleryBuilder) generateThumbnail(sourcePath string) error {
 	return nil
 }
 
+// folderEntry pairs a directory entry with the name it has on disk after the
+// rename to NFC. A rename that is skipped or fails leaves the original name, so
+// the node, the link and the file always agree.
+type folderEntry struct {
+	dirEntry os.DirEntry
+	name     string
+}
+
+// renameToNFC renames an entry to its NFC form. It goes through a temporary
+// name, because a normalization-insensitive volume such as APFS resolves both
+// forms to one file, and POSIX rename is a no-op in that case.
+func renameToNFC(path, name, normalized string) error {
+	oldPath := filepath.Join(path, name)
+	newPath := filepath.Join(path, normalized)
+	tempPath := filepath.Join(path, fmt.Sprintf(".nfc-%d-%s", os.Getpid(), normalized))
+
+	if err := os.Rename(oldPath, tempPath); err != nil {
+		return fmt.Errorf("failed to rename %s to a temporary name: %w", oldPath, err)
+	}
+
+	if err := os.Rename(tempPath, newPath); err != nil {
+		if restoreErr := os.Rename(tempPath, oldPath); restoreErr != nil {
+			return fmt.Errorf("failed to rename %s to %s, and %s is left behind: %w", oldPath, newPath, tempPath, err)
+		}
+		return fmt.Errorf("failed to rename %s to %s: %w", oldPath, newPath, err)
+	}
+
+	return nil
+}
+
+// normalizeFolder reads a folder and renames every entry that is not in NFC
+// form. A web server matches the raw bytes of a URL, so the names on disk and
+// the links in the gallery must use one form. It returns the name each entry
+// has on disk afterwards.
+func (b *GalleryBuilder) normalizeFolder(path string) ([]folderEntry, error) {
+	items, err := os.ReadDir(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read directory: %w", err)
+	}
+
+	// A byte-exact set of the names in the folder. os.Stat cannot serve here,
+	// because a normalization-insensitive volume reports the NFC name as
+	// present while the name it stores is still NFD.
+	existing := make(map[string]struct{}, len(items))
+	for _, item := range items {
+		existing[item.Name()] = struct{}{}
+	}
+
+	// Names whose rename did not happen. A sidecar such as <name>.thumb.jpg
+	// keeps the name of its media file, so it must not move on its own.
+	kept := make(map[string]struct{})
+
+	entries := make([]folderEntry, 0, len(items))
+	for _, item := range items {
+		entries = append(entries, folderEntry{
+			dirEntry: item,
+			name:     b.normalizeEntry(path, item.Name(), existing, kept),
+		})
+	}
+
+	return entries, nil
+}
+
+// normalizeEntry renames one entry to NFC and returns the name it has on disk
+// afterwards. Every path that does not rename returns the original name.
+func (b *GalleryBuilder) normalizeEntry(path, name string, existing, kept map[string]struct{}) string {
+	normalized := NormalizeName(name)
+	if normalized == name {
+		return name
+	}
+
+	oldPath := filepath.Join(path, name)
+
+	// A sidecar is its media file's name plus a suffix, as in <name>.thumb.jpg.
+	for base := range kept {
+		if strings.HasPrefix(name, base+".") {
+			b.log.Warn(
+				"skipped rename to NFC form, the media file it belongs to kept its name",
+				slog.String("path", oldPath),
+				slog.String("media_file", filepath.Join(path, base)),
+			)
+			kept[name] = struct{}{}
+			return name
+		}
+	}
+
+	if _, collides := existing[normalized]; collides {
+		b.log.Warn(
+			"skipped rename to NFC form, destination exists",
+			slog.String("old_path", oldPath),
+			slog.String("new_path", filepath.Join(path, normalized)),
+		)
+		kept[name] = struct{}{}
+		return name
+	}
+
+	if b.Config.DryRun {
+		b.log.Info("rename to NFC form", slog.String("old_path", oldPath), slog.String("new_path", filepath.Join(path, normalized)))
+		kept[name] = struct{}{}
+		return name
+	}
+
+	if err := renameToNFC(path, name, normalized); err != nil {
+		b.log.Error("failed to rename to NFC form", slog.String("path", oldPath), slog.String("err", err.Error()))
+		kept[name] = struct{}{}
+		return name
+	}
+
+	delete(existing, name)
+	existing[normalized] = struct{}{}
+
+	b.log.Info("renamed to NFC form", slog.String("old_path", oldPath), slog.String("new_path", filepath.Join(path, normalized)))
+
+	return normalized
+}
+
 func (b *GalleryBuilder) walkFolder(parent *GalleryNode) {
 	b.log.Debug("walking folder", slog.String("path", parent.Path))
 
-	items, err := os.ReadDir(parent.Path)
+	items, err := b.normalizeFolder(parent.Path)
 	if err != nil {
-		slog.Error("failed to read directory", slog.String("path", parent.Path), slog.String("err", err.Error()))
+		b.log.Error("failed to read directory", slog.String("path", parent.Path), slog.String("err", err.Error()))
 		return
 	}
 
 	for _, item := range items {
 		node := GalleryNode{
-			Title:  item.Name(),
+			Title:  item.name,
 			Parent: parent,
-			Path:   filepath.Join(parent.Path, item.Name()),
+			Path:   filepath.Join(parent.Path, item.name),
 		}
 
-		if matches, _ := filepath.Match("cover.*", filepath.Base(item.Name())); matches {
+		if matches, _ := filepath.Match("cover.*", item.name); matches {
 			parent.Cover = filepath.Base(node.Path)
 			continue
 		}
 
-		if item.IsDir() {
+		if item.dirEntry.IsDir() {
 			b.walkFolder(&node)
 			parent.AddFolder(&node)
 			continue
 		}
 
 		for _, ignoreName := range b.IgnoreNames {
-			matches, err := filepath.Match(ignoreName, filepath.Base(item.Name()))
+			matches, err := filepath.Match(ignoreName, item.name)
 			if err != nil {
 				// Only invalid patterns, but lets leave it there just in case I mess up with the config
 				panic(err)
@@ -202,14 +318,14 @@ func (b *GalleryBuilder) walkFolder(parent *GalleryNode) {
 			switch node.Kind() {
 			case GalleryNodeKindImage:
 				if err := b.generateThumbnail(node.Path); err != nil {
-					slog.Error("failed to generate thumbnail", slog.String("path", node.Path), slog.String("err", err.Error()))
+					b.log.Error("failed to generate thumbnail", slog.String("path", node.Path), slog.String("err", err.Error()))
 				}
 			case GalleryNodeKindVideo:
 				cmd := exec.Command("ffmpeg", "-i", node.Path, "-vf", `select=eq(n\,0)`, "-q:v", "3", "-update", "1", "-frames:v", "1", node.Path+".thumb.jpg")
 				output, err := cmd.CombinedOutput()
 				if err != nil {
-					slog.Error("failed to generate thumb", slog.String("path", node.Path), slog.String("err", err.Error()))
-					slog.Error(string(output))
+					b.log.Error("failed to generate thumb", slog.String("path", node.Path), slog.String("err", err.Error()))
+					b.log.Error(string(output))
 				}
 			}
 

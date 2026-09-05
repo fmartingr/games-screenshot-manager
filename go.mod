@@ -9,6 +9,7 @@ require (
 	github.com/lmittmann/tint v1.1.2
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/image v0.34.0
+	golang.org/x/text v0.41.0
 )
 
 require (

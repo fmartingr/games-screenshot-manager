@@ -58,14 +58,61 @@ func (f *FileManager) ProcessGame(game *Game) error {
 }
 
 func (f *FileManager) GetPathForGame(game *Game) string {
-	destinationPath := filepath.Join(f.config.OutputPath, game.Platform)
+	destinationPath := filepath.Join(f.config.OutputPath, NormalizeName(game.Platform))
 	if game.Name != "" {
-		destinationPath = filepath.Join(destinationPath, game.Name)
+		destinationPath = filepath.Join(destinationPath, NormalizeName(game.Name))
 	} else {
-		destinationPath = filepath.Join(destinationPath, game.ID)
+		destinationPath = filepath.Join(destinationPath, NormalizeName(game.ID))
 	}
 
 	return toolkitPaths.ExpandUser(destinationPath)
+}
+
+// adoptExistingDir returns the directory to use for path. Where a segment below
+// base is missing, but a sibling holds the same name in another Unicode form,
+// that sibling is renamed to its NFC name. An earlier run's directory is
+// therefore reused, not duplicated beside it.
+func (f *FileManager) adoptExistingDir(base, path string) string {
+	if !strings.HasPrefix(path, base+string(filepath.Separator)) {
+		return path
+	}
+
+	parent := f.adoptExistingDir(base, filepath.Dir(path))
+	name := filepath.Base(path)
+	path = filepath.Join(parent, name)
+
+	if f.FileExists(path) {
+		return path
+	}
+
+	items, err := os.ReadDir(parent)
+	if err != nil {
+		return path
+	}
+
+	for _, item := range items {
+		if item.Name() == name || NormalizeName(item.Name()) != name {
+			continue
+		}
+
+		oldPath := filepath.Join(parent, item.Name())
+
+		if f.config.DryRun {
+			f.log.Info("rename to NFC form", slog.String("old_path", oldPath), slog.String("new_path", path))
+			return oldPath
+		}
+
+		if err := renameToNFC(parent, item.Name(), name); err != nil {
+			f.log.Error("failed to rename to NFC form", slog.String("path", oldPath), slog.String("err", err.Error()))
+			return oldPath
+		}
+
+		f.log.Info("renamed to NFC form", slog.String("old_path", oldPath), slog.String("new_path", path))
+
+		return path
+	}
+
+	return path
 }
 
 func (f *FileManager) ProcessMedia(game *Game, media MediaFile) error {
@@ -77,7 +124,7 @@ func (f *FileManager) ProcessMedia(game *Game, media MediaFile) error {
 		slog.String("destination_name", media.GetDestinationName()),
 	)
 
-	destinationPath := f.GetPathForGame(game)
+	destinationPath := f.adoptExistingDir(toolkitPaths.ExpandUser(f.config.OutputPath), f.GetPathForGame(game))
 	if media.GetKind() == MediaKindRecording {
 		destinationPath = filepath.Join(destinationPath, "recordings")
 	}
@@ -90,7 +137,8 @@ func (f *FileManager) ProcessMedia(game *Game, media MediaFile) error {
 		}
 	}
 
-	destMediaPath := filepath.Join(destinationPath, media.GetDestinationName())
+	mediaName := NormalizeName(media.GetDestinationName())
+	destMediaPath := filepath.Join(destinationPath, mediaName)
 
 	if f.FileExists(destMediaPath) {
 		if media.Compare(destMediaPath) {
@@ -98,7 +146,7 @@ func (f *FileManager) ProcessMedia(game *Game, media MediaFile) error {
 		}
 
 		if media.GetKind() != MediaKindCover {
-			destinationName := media.GetDestinationName()
+			destinationName := mediaName
 			extestion := filepath.Ext(destinationName)
 			destinationName = strings.TrimSuffix(destinationName, extestion)
 			destinationName = fmt.Sprintf("%s_%s%s", destinationName, media.GetSourceHash(), extestion)
@@ -110,6 +158,8 @@ func (f *FileManager) ProcessMedia(game *Game, media MediaFile) error {
 				slog.String("new_destination_path", destinationName),
 			)
 			media.SetDestinationName(destinationName)
+			mediaName = destinationName
+			destMediaPath = filepath.Join(destinationPath, mediaName)
 		} else {
 			slog.Warn(
 				"cover already exists but hash mismatch, skipping",
@@ -134,7 +184,7 @@ func (f *FileManager) ProcessMedia(game *Game, media MediaFile) error {
 			media.SetSourcePath(tempFile.Name())
 		}
 
-		_, err := f.copyFile(media.GetSourcePath(), filepath.Join(destinationPath, media.GetDestinationName()))
+		_, err := f.copyFile(media.GetSourcePath(), filepath.Join(destinationPath, mediaName))
 		if err != nil {
 			return fmt.Errorf("error copying media %s -> %s: %s", media.GetSourcePath(), destMediaPath, err)
 		}

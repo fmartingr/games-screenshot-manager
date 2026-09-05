@@ -115,7 +115,7 @@ func AdjustDatetimeByVideoDuration(datetime time.Time, videoPath string) time.Ti
 	if duration <= 0 {
 		return datetime
 	}
-	
+
 	// Subtract the video duration to get the start time
 	return datetime.Add(-time.Duration(duration) * time.Second)
 }

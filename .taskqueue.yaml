@@ -1,0 +1,105 @@
+version: 1
+path: .tasks
+
+# The project's board. Like priorities these are a closed, ordered set — a task
+# can only sit in one of them, and the list is the board from left to right.
+# The name is what task frontmatter stores and what `tq move` takes.
+#
+# consider_ready: true   work here is waiting to be picked up, so `tq ready`
+#                     offers it. Left out, the column holds work that is
+#                     unsorted, claimed or finished.
+# consider_done: true  a task here counts as finished, so a dependency on it
+#                     stops blocking and `tq done` moves tasks to this
+#                     column. Exactly one column should claim it.
+# default: true       where a task filed without a status goes
+columns:
+  - name: inbox
+    display_name: Inbox
+    default: true
+  - name: todo
+    display_name: To do
+    consider_ready: true
+  - name: in-progress
+    display_name: In Progress
+  - name: done
+    display_name: Done
+    consider_done: true
+  - name: rejected
+    display_name: Rejected
+
+# The project's priority vocabulary. Unlike labels, these are a closed set —
+# a task can only be filed under one of them — and they are ordered: the list is
+# the ranking, most severe first, which is how the board and `tq list` sort.
+# Exactly one is the default, which a task filed without a priority gets. The
+# name is what task frontmatter stores and what --priority takes. Hex colours
+# must be quoted, or YAML reads them as a comment.
+priorities:
+  - name: urgent
+    color: "#b42318"
+    display_name: Urgent
+  - name: high
+    color: "#c2410c"
+    display_name: High
+  - name: normal
+    color: "#4b5563"
+    display_name: Normal
+    default: true
+  - name: low
+    color: "#6b7280"
+    display_name: Low
+
+# The project's label vocabulary. Labels stay freeform — any label can be put on
+# a task — and this set is what gives them a colour, a display name and the
+# grouping the board shows. A "/" groups labels for display only; the label is
+# stored and matched as the whole string, and the board draws what is before it
+# as the first half of a two-tone chip, with display_name naming the second.
+# Hex colours must be quoted, or YAML reads them as a comment.
+labels:
+  bug:
+    color: "#d73a4a"
+    display_name: Bug
+  feature:
+    color: "#0e8a16"
+    display_name: Feature
+  chore:
+    color: "#8b949e"
+    display_name: Chore
+  docs:
+    color: "#0075ca"
+    display_name: Docs
+  refactor:
+    color: "#6f42c1"
+    display_name: Refactor
+  security:
+    color: "#b60205"
+    display_name: Security
+  performance:
+    color: "#fbca04"
+    display_name: Performance
+  tests:
+    color: "#5319e7"
+    display_name: Tests
+  component/backend:
+    color: "#1d76db"
+    display_name: Backend
+  component/frontend:
+    color: "#c5def5"
+    display_name: Frontend
+  component/cli:
+    color: "#0052cc"
+    display_name: CLI
+  component/api:
+    color: "#006b75"
+    display_name: API
+  component/store:
+    color: "#5319e7"
+    display_name: Store
+  component/ci:
+    color: "#bfd4f2"
+    display_name: CI
+  component/build:
+    color: "#d4c5f9"
+    display_name: Build
+  component/config:
+    color: "#c2e0c6"
+    display_name: Config

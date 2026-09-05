@@ -173,6 +173,27 @@ func TestGalleryNode_GetWebPath(t *testing.T) {
 			title:    "Game 🎮",
 			expected: "/Steam/Game%20%F0%9F%8E%AE/",
 		},
+		{
+			// The gallery walk renames to NFC and puts the name it found on
+			// disk in Path. A name that stays NFD must keep its own bytes in
+			// the link, or the link stops matching the file.
+			name:     "NFD path is escaped as it is stored",
+			path:     "./Game Boy Advance/Poke\u0301mon Rojo Fuego",
+			title:    "Poke\u0301mon Rojo Fuego",
+			expected: "/Game%20Boy%20Advance/Poke%CC%81mon%20Rojo%20Fuego/",
+		},
+		{
+			name:     "NFC path is escaped as it is stored",
+			path:     "./Game Boy Advance/Pok\u00e9mon Rojo Fuego",
+			title:    "Pok\u00e9mon Rojo Fuego",
+			expected: "/Game%20Boy%20Advance/Pok%C3%A9mon%20Rojo%20Fuego/",
+		},
+		{
+			name:     "NFD filename is escaped as it is stored",
+			path:     "./Steam/Poke\u0301mon/captura e\u0301pica.jpg",
+			title:    "captura e\u0301pica.jpg",
+			expected: "/Steam/Poke%CC%81mon/captura%20e%CC%81pica.jpg",
+		},
 	}
 
 	for _, tt := range tests {
@@ -266,6 +287,13 @@ func TestGalleryNode_GetWebCoverPath(t *testing.T) {
 			title:    "Steam",
 			cover:    "image(1).jpg",
 			expected: "/Steam/image%281%29.jpg",
+		},
+		{
+			name:     "NFD path and NFD cover are escaped as they are stored",
+			path:     "./Steam/Poke\u0301mon",
+			title:    "Poke\u0301mon",
+			cover:    "portada e\u0301pica.jpg",
+			expected: "/Steam/Poke%CC%81mon/portada%20e%CC%81pica.jpg",
 		},
 	}
 

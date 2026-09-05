@@ -60,7 +60,8 @@ func (n *GalleryNode) GetWebPath() string {
 	// Split path into segments
 	segments := strings.Split(cleanPath, string(filepath.Separator))
 
-	// Encode each segment
+	// Encode each segment. Path holds the name the gallery walk found on disk,
+	// so the link matches the bytes a web server compares it against.
 	encodedSegments := make([]string, 0, len(segments))
 	for _, segment := range segments {
 		if segment != "" {
