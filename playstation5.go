@@ -7,8 +7,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	toolkitPaths "git.nakama.town/fmartingr/gotoolkit/paths"
 )
 
 var _ Provider = (*Playstation5Provider)(nil)
@@ -144,7 +142,7 @@ func (p *Playstation5Provider) FindGames(options ProviderConfig) ([]Game, error)
 // getScreenshotsPath returns the path where PlayStation 5 screenshots are stored
 func (p *Playstation5Provider) getScreenshotsPath() (string, error) {
 	if p.ps5Config.GetPath() != "" && p.ps5Config.GetPath() != "auto" {
-		return toolkitPaths.ExpandUser(p.ps5Config.GetPath()), nil
+		return expandUser(p.ps5Config.GetPath()), nil
 	}
 
 	return "", fmt.Errorf("path to PlayStation 5 screenshots folder must be provided")

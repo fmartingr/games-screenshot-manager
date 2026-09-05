@@ -7,8 +7,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-
-	toolkitPaths "git.nakama.town/fmartingr/gotoolkit/paths"
 )
 
 var _ Provider = (*MinecraftProvider)(nil)
@@ -99,7 +97,7 @@ func (p *MinecraftProvider) FindGames(options ProviderConfig) ([]Game, error) {
 // getScreenshotsPaths returns the paths where Minecraft screenshots are stored
 func (p *MinecraftProvider) getScreenshotsPaths() ([]string, error) {
 	if p.mcConfig.GetPath() != "" && p.mcConfig.GetPath() != "auto" {
-		return []string{toolkitPaths.ExpandUser(p.mcConfig.GetPath())}, nil
+		return []string{expandUser(p.mcConfig.GetPath())}, nil
 	}
 
 	var paths []string
@@ -127,7 +125,7 @@ func (p *MinecraftProvider) getScreenshotsPaths() ([]string, error) {
 
 // processScreenshotsPath processes screenshots from a given path and adds them to the appropriate game
 func (p *MinecraftProvider) processScreenshotsPath(path string, standaloneGame, flatpakGame *Game) error {
-	path = toolkitPaths.ExpandUser(path)
+	path = expandUser(path)
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		return nil // Skip if directory doesn't exist
 	}

@@ -8,7 +8,6 @@ import (
 	"runtime"
 	"strings"
 
-	toolkitPaths "git.nakama.town/fmartingr/gotoolkit/paths"
 	"github.com/fmartingr/games-screenshot-manager/covers"
 )
 
@@ -66,7 +65,7 @@ func (p *HytaleProvider) GetScreenshots() error {
 	}
 
 	// Check if directory exists, skip if it doesn't
-	path = toolkitPaths.ExpandUser(path)
+	path = expandUser(path)
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		p.log.Debug("Screenshots directory does not exist", slog.String("path", path))
 		return nil
@@ -143,12 +142,12 @@ func (p *HytaleProvider) FindGames(options ProviderConfig) ([]Game, error) {
 // getScreenshotsPath returns the path where Hytale screenshots are stored
 func (p *HytaleProvider) getScreenshotsPath() (string, error) {
 	if p.hytaleConfig.GetPath() != "" && p.hytaleConfig.GetPath() != "auto" {
-		return toolkitPaths.ExpandUser(p.hytaleConfig.GetPath()), nil
+		return expandUser(p.hytaleConfig.GetPath()), nil
 	}
 
 	switch runtime.GOOS {
 	case "darwin", "linux":
-		return toolkitPaths.ExpandUser("~/Pictures/Hytale Screenshots"), nil
+		return expandUser("~/Pictures/Hytale Screenshots"), nil
 	default:
 		return "", fmt.Errorf("unsupported operating system: %s (only macOS and Linux are supported)", runtime.GOOS)
 	}

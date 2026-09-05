@@ -1,7 +1,9 @@
 package gamesscreenshotmanager
 
 import (
+	"bytes"
 	"fmt"
+	"html/template"
 	"image"
 	"image/jpeg"
 	"image/png"
@@ -12,19 +14,17 @@ import (
 	"path/filepath"
 	"strings"
 
-	toolkitPaths "git.nakama.town/fmartingr/gotoolkit/paths"
-	toolkitTemplate "git.nakama.town/fmartingr/gotoolkit/template"
 	"github.com/fmartingr/games-screenshot-manager/templates"
 	"golang.org/x/image/draw"
 )
 
 type GalleryBuilder struct {
-	Config         Config
-	Root           *GalleryNode
-	IgnoreNames    []string
-	templateEngine *toolkitTemplate.Engine
-	log            *slog.Logger
-	fileManager    *FileManager
+	Config      Config
+	Root        *GalleryNode
+	IgnoreNames []string
+	templates   *template.Template
+	log         *slog.Logger
+	fileManager *FileManager
 }
 
 func NewGalleryBuilder(config Config) (*GalleryBuilder, error) {
@@ -48,14 +48,14 @@ func NewGalleryBuilder(config Config) (*GalleryBuilder, error) {
 		templateFS = templates.Templates
 	}
 
-	engine, err := toolkitTemplate.NewEngine(templateFS)
+	parsed, err := template.ParseFS(templateFS, "*.html")
 	if err != nil {
-		return nil, fmt.Errorf("failed to create template engine: %w", err)
+		return nil, fmt.Errorf("failed to parse templates: %w", err)
 	}
 
 	return &GalleryBuilder{
-		Config:         config,
-		templateEngine: engine,
+		Config:    config,
+		templates: parsed,
 		IgnoreNames: []string{
 			"cover.*",
 			".DS_Store",
@@ -71,7 +71,7 @@ func NewGalleryBuilder(config Config) (*GalleryBuilder, error) {
 func (b *GalleryBuilder) Build() (*GalleryNode, error) {
 	b.log.Info("building gallery", slog.String("output_path", b.Config.OutputPath))
 
-	outputPath := toolkitPaths.ExpandUser(filepath.Join("./", b.Config.OutputPath))
+	outputPath := expandUser(filepath.Join("./", b.Config.OutputPath))
 
 	b.Root = &GalleryNode{
 		Title: b.Config.Gallery.SiteTitle,
@@ -226,7 +226,7 @@ func (b *GalleryBuilder) normalizeFolder(path string) ([]folderEntry, error) {
 // normalizeEntry renames one entry to NFC and returns the name it has on disk
 // afterwards. Every path that does not rename returns the original name.
 func (b *GalleryBuilder) normalizeEntry(path, name string, existing, kept map[string]struct{}) string {
-	normalized := NormalizeName(name)
+	normalized := normalizeName(name)
 	if normalized == name {
 		return name
 	}
@@ -343,18 +343,18 @@ func (b *GalleryBuilder) buildSite(node *GalleryNode) {
 		// Get the last updated time for this specific node
 		lastUpdated := node.GetLastUpdated()
 
-		result, err := b.templateEngine.Render("album.html", map[string]any{
+		// html/template writes as it goes, so a failed render leaves the part
+		// it managed in the buffer. That part must not reach index.html.
+		var result bytes.Buffer
+		if err := b.templates.ExecuteTemplate(&result, "album.html", map[string]any{
 			"Node":        &node,
 			"LastUpdated": lastUpdated,
 			"Title":       node.Title,
 			"Context":     b.Config.Gallery.Context,
 			"Config":      &b.Config,
-		})
-		if err != nil {
+		}); err != nil {
 			slog.Error("failed to render template", slog.String("path", node.Path), slog.String("err", err.Error()))
-		}
-
-		if err := b.fileManager.WriteFileIfModified(filepath.Join(node.Path, "index.html"), result); err != nil {
+		} else if err := b.fileManager.WriteFileIfModified(filepath.Join(node.Path, "index.html"), result.Bytes()); err != nil {
 			slog.Error("failed to write template", slog.String("path", node.Path), slog.String("err", err.Error()))
 		}
 

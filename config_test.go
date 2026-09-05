@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/pelletier/go-toml/v2"
 	"github.com/stretchr/testify/require"
 )
 
@@ -92,7 +93,7 @@ func TestConfigSave(t *testing.T) {
 
 	// Create a new config and load the saved data
 	newConfig := &Config{}
-	err = encoder.Decode(savedData, newConfig)
+	err = toml.Unmarshal(savedData, newConfig)
 	require.NoError(t, err)
 
 	// Compare the configs

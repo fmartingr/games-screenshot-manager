@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"time"
 
-	toolkitPaths "git.nakama.town/fmartingr/gotoolkit/paths"
 	"github.com/barasher/go-exiftool"
 )
 
@@ -147,7 +146,7 @@ func (p *Playstation4Provider) FindGames(options ProviderConfig) ([]Game, error)
 // getScreenshotsPath returns the path where PlayStation 4 screenshots are stored
 func (p *Playstation4Provider) getScreenshotsPath() (string, error) {
 	if p.ps4Config.GetPath() != "" && p.ps4Config.GetPath() != "auto" {
-		return toolkitPaths.ExpandUser(p.ps4Config.GetPath()), nil
+		return expandUser(p.ps4Config.GetPath()), nil
 	}
 
 	return "", fmt.Errorf("path to PlayStation 4 screenshots folder must be provided")

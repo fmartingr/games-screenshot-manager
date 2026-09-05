@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	toolkitPaths "git.nakama.town/fmartingr/gotoolkit/paths"
 	"github.com/gosimple/slug"
 )
 
@@ -58,14 +57,14 @@ func (f *FileManager) ProcessGame(game *Game) error {
 }
 
 func (f *FileManager) GetPathForGame(game *Game) string {
-	destinationPath := filepath.Join(f.config.OutputPath, NormalizeName(game.Platform))
+	destinationPath := filepath.Join(f.config.OutputPath, normalizeName(game.Platform))
 	if game.Name != "" {
-		destinationPath = filepath.Join(destinationPath, NormalizeName(game.Name))
+		destinationPath = filepath.Join(destinationPath, normalizeName(game.Name))
 	} else {
-		destinationPath = filepath.Join(destinationPath, NormalizeName(game.ID))
+		destinationPath = filepath.Join(destinationPath, normalizeName(game.ID))
 	}
 
-	return toolkitPaths.ExpandUser(destinationPath)
+	return expandUser(destinationPath)
 }
 
 // adoptExistingDir returns the directory to use for path. Where a segment below
@@ -73,6 +72,12 @@ func (f *FileManager) GetPathForGame(game *Game) string {
 // that sibling is renamed to its NFC name. An earlier run's directory is
 // therefore reused, not duplicated beside it.
 func (f *FileManager) adoptExistingDir(base, path string) string {
+	// Both sides are cleaned first. expandUser leaves a path as it found it,
+	// while filepath.Join cleans, so an output_path of "./Output" or "Output/"
+	// would otherwise fail this test and skip the adoption entirely.
+	base = filepath.Clean(base)
+	path = filepath.Clean(path)
+
 	if !strings.HasPrefix(path, base+string(filepath.Separator)) {
 		return path
 	}
@@ -91,7 +96,7 @@ func (f *FileManager) adoptExistingDir(base, path string) string {
 	}
 
 	for _, item := range items {
-		if item.Name() == name || NormalizeName(item.Name()) != name {
+		if item.Name() == name || normalizeName(item.Name()) != name {
 			continue
 		}
 
@@ -124,7 +129,7 @@ func (f *FileManager) ProcessMedia(game *Game, media MediaFile) error {
 		slog.String("destination_name", media.GetDestinationName()),
 	)
 
-	destinationPath := f.adoptExistingDir(toolkitPaths.ExpandUser(f.config.OutputPath), f.GetPathForGame(game))
+	destinationPath := f.adoptExistingDir(expandUser(f.config.OutputPath), f.GetPathForGame(game))
 	if media.GetKind() == MediaKindRecording {
 		destinationPath = filepath.Join(destinationPath, "recordings")
 	}
@@ -137,7 +142,7 @@ func (f *FileManager) ProcessMedia(game *Game, media MediaFile) error {
 		}
 	}
 
-	mediaName := NormalizeName(media.GetDestinationName())
+	mediaName := normalizeName(media.GetDestinationName())
 	destMediaPath := filepath.Join(destinationPath, mediaName)
 
 	if f.FileExists(destMediaPath) {
@@ -228,14 +233,35 @@ func (f *FileManager) copyFile(src, dst string) (int64, error) {
 	return nBytes, err
 }
 
+// WriteFile puts the data at path in one step. It writes a temporary file in
+// the same directory and renames it, so a failure part way cannot leave a
+// truncated file where a complete one was.
 func (f *FileManager) WriteFile(path string, data io.Reader) error {
-	destination, err := os.Create(path)
+	temp, err := os.CreateTemp(filepath.Dir(path), filepath.Base(path)+".*.tmp")
 	if err != nil {
-		return fmt.Errorf("error creating destination file: %w", err)
+		return fmt.Errorf("error creating temporary file: %w", err)
 	}
-	defer destination.Close()
-	_, err = io.Copy(destination, data)
-	return err
+
+	defer os.Remove(temp.Name())
+
+	if _, err := io.Copy(temp, data); err != nil {
+		temp.Close()
+		return fmt.Errorf("error writing temporary file: %w", err)
+	}
+
+	if err := temp.Close(); err != nil {
+		return fmt.Errorf("error closing temporary file: %w", err)
+	}
+
+	if err := os.Chmod(temp.Name(), 0644); err != nil {
+		return fmt.Errorf("error setting the file mode: %w", err)
+	}
+
+	if err := os.Rename(temp.Name(), path); err != nil {
+		return fmt.Errorf("error moving the file into place: %w", err)
+	}
+
+	return nil
 }
 
 func (f *FileManager) WriteFileIfModified(path string, data []byte) error {

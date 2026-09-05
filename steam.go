@@ -12,8 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	toolkitPaths "git.nakama.town/fmartingr/gotoolkit/paths"
 )
 
 var _ Provider = (*SteamProvider)(nil)
@@ -267,9 +265,9 @@ func (p *SteamProvider) getSteamBasePath() (string, error) {
 	var path string
 	switch runtime.GOOS {
 	case "darwin":
-		path = toolkitPaths.ExpandUser("~/Library/Application Support/Steam")
+		path = expandUser("~/Library/Application Support/Steam")
 	case "linux":
-		path = toolkitPaths.ExpandUser("~/.local/share/Steam")
+		path = expandUser("~/.local/share/Steam")
 	case "windows":
 		path = "C:\\Program Files (x86)\\Steam"
 	default:

@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	toolkitPaths "git.nakama.town/fmartingr/gotoolkit/paths"
 	"github.com/barasher/go-exiftool"
 )
 
@@ -131,7 +130,7 @@ func (p *GuildWars2Provider) FindGames(options ProviderConfig) ([]Game, error) {
 // getScreenshotsPath returns the path where Guild Wars 2 screenshots are stored
 func (p *GuildWars2Provider) getScreenshotsPath() (string, error) {
 	if p.gw2Config.GetPath() != "" && p.gw2Config.GetPath() != "auto" {
-		return toolkitPaths.ExpandUser(p.gw2Config.GetPath()), nil
+		return expandUser(p.gw2Config.GetPath()), nil
 	}
 
 	if runtime.GOOS == "windows" {

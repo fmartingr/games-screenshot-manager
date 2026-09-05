@@ -12,9 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"git.nakama.town/fmartingr/gotoolkit/cache"
-	toolkitModel "git.nakama.town/fmartingr/gotoolkit/model"
 )
 
 const (
@@ -116,10 +113,17 @@ type SteamAppListResponse struct {
 	} `json:"response"`
 }
 
+// gameCache is the part of the cache the Steam client uses. It is an interface
+// so a test can supply a cache that does not touch the user's cache directory.
+type gameCache interface {
+	Get(key string) ([]byte, error)
+	Set(key string, value []byte, ttl time.Duration) error
+}
+
 // SteamClient handles API interactions with Steam
 type SteamClient struct {
 	log         *slog.Logger
-	cache       toolkitModel.Cache
+	cache       gameCache
 	steamApps   SteamAppList
 	apiKey      string
 	fileManager *FileManager
@@ -128,7 +132,7 @@ type SteamClient struct {
 // NewSteamClient creates a new Steam client
 // apiKey is optional but required for downloading the app list (the endpoint requires authentication)
 func NewSteamClient(fileManager *FileManager, apiKey string) (*SteamClient, error) {
-	steamCache, err := cache.NewFileCache("games-screenshot-manager")
+	steamCache, err := newFileCache("games-screenshot-manager")
 	if err != nil {
 		return nil, fmt.Errorf("error creating file cache: %s", err)
 	}
@@ -163,14 +167,16 @@ func (c *SteamClient) DownloadSteamAppList() error {
 	var payload []byte
 
 	result, err := c.cache.Get(cacheKey)
-	if err != nil && !errors.Is(err, toolkitModel.ErrCacheKeyDontExist) {
+	if err != nil && !errors.Is(err, errCacheKeyNotFound) {
 		return fmt.Errorf("error retrieving cache: %s", err)
 	}
 
-	if result != nil {
+	// An empty payload is not a hit. It cannot be parsed, and treating it as
+	// one would keep the download from ever repairing the cache.
+	if err == nil && len(result) > 0 {
 		c.log.Debug("Using cached Steam app list", slog.String("cache_key", cacheKey))
 		download = false
-		payload = result.([]byte)
+		payload = result
 	} else {
 		c.log.Debug("Cache miss, will download Steam app list", slog.String("cache_key", cacheKey))
 	}
@@ -225,27 +231,26 @@ func (c *SteamClient) DownloadSteamAppList() error {
 				return fmt.Errorf("error making request for Steam APP List (page %d): %s", page, err)
 			}
 
-			if response.Body != nil {
-				defer response.Body.Close()
-			}
-
 			c.log.Debug("Steam API response received",
 				slog.Int("page", page),
 				slog.Int("status_code", response.StatusCode),
 				slog.String("status", response.Status),
 				slog.String("content_type", response.Header.Get("Content-Type")))
 
+			// The body is read and closed inside the iteration. A deferred
+			// close would hold every page's connection until the whole
+			// download ends.
+			pagePayload, err := io.ReadAll(response.Body)
+			response.Body.Close()
+
 			if response.StatusCode < 200 || response.StatusCode >= 300 {
-				// Read body to include in error message
-				bodyBytes, _ := io.ReadAll(response.Body)
-				bodyPreview := string(bodyBytes)
+				bodyPreview := string(pagePayload)
 				if len(bodyPreview) > 500 {
 					bodyPreview = bodyPreview[:500]
 				}
 				return fmt.Errorf("HTTP error on page %d: status code %d, status: %s. Response body: %s", page, response.StatusCode, response.Status, bodyPreview)
 			}
 
-			pagePayload, err := io.ReadAll(response.Body)
 			if err != nil {
 				return fmt.Errorf("error reading steam response (page %d): %s", page, err)
 			}
@@ -312,8 +317,10 @@ func (c *SteamClient) DownloadSteamAppList() error {
 			slog.Int("total_apps", len(allApps)))
 
 		// Cache the complete combined response for 1 week
-		if err := c.cache.Set(cacheKey, payload, cache.WithTTL(7*24*time.Hour)); err != nil {
-			return fmt.Errorf("error caching steam app list: %s", err)
+		// The cache only saves the next download. Losing it must not throw away
+		// the list that is already in memory.
+		if err := c.cache.Set(cacheKey, payload, 7*24*time.Hour); err != nil {
+			c.log.Warn("could not cache the Steam app list", slog.String("err", err.Error()))
 		}
 	}
 

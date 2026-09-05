@@ -8,8 +8,6 @@ import (
 	"runtime"
 	"strings"
 	"time"
-
-	toolkitPaths "git.nakama.town/fmartingr/gotoolkit/paths"
 )
 
 var _ Provider = (*WorldOfWarcraftProvider)(nil)
@@ -116,7 +114,7 @@ func (p *WorldOfWarcraftProvider) FindGames(options ProviderConfig) ([]Game, err
 // getScreenshotsPath returns the path where World of Warcraft screenshots are stored
 func (p *WorldOfWarcraftProvider) getScreenshotsPath() (string, error) {
 	if p.wowConfig.GetPath() != "" && p.wowConfig.GetPath() != "auto" {
-		return toolkitPaths.ExpandUser(p.wowConfig.GetPath()), nil
+		return expandUser(p.wowConfig.GetPath()), nil
 	}
 
 	switch runtime.GOOS {

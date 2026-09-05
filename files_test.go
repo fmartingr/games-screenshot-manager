@@ -172,3 +172,49 @@ func TestFileManager_ProcessMediaReusesAnNFDDirectory(t *testing.T) {
 		t.Errorf("the screenshot did not land in the adopted directory: %v", err)
 	}
 }
+
+// expandUser leaves a path as it found it while filepath.Join cleans, so an
+// output_path written with "./" or a trailing slash used to skip the adoption
+// and duplicate the game directory.
+func TestFileManager_adoptExistingDirWithAnUncleanOutputPath(t *testing.T) {
+	nfdGame := "Poke\u0301mon Rojo Fuego"
+	nfcGame := "Pok\u00e9mon Rojo Fuego"
+
+	for _, shape := range []string{"Output", "./Output", "Output/", "./Output/"} {
+		t.Run(shape, func(t *testing.T) {
+			root := t.TempDir()
+			requireNormalizationSensitiveFS(t, root)
+
+			// Work relative to the temporary directory, so the unclean shapes
+			// are the ones the config would carry.
+			t.Chdir(root)
+
+			existing := filepath.Join("Output", "PC", nfdGame)
+			if err := os.MkdirAll(existing, 0755); err != nil {
+				t.Fatalf("failed to create the NFD directory: %v", err)
+			}
+
+			manager := NewFileManager(Config{OutputPath: shape})
+			game := &Game{Name: nfdGame, Platform: "PC"}
+
+			result := manager.adoptExistingDir(expandUser(shape), manager.GetPathForGame(game))
+
+			if _, err := os.Stat(result); err != nil {
+				t.Fatalf("adoptExistingDir() = %q, which is not on disk: %v", result, err)
+			}
+
+			entries, err := os.ReadDir(filepath.Join("Output", "PC"))
+			if err != nil {
+				t.Fatalf("failed to read the platform directory: %v", err)
+			}
+
+			if len(entries) != 1 {
+				t.Fatalf("expected one game directory, found %d", len(entries))
+			}
+
+			if entries[0].Name() != nfcGame {
+				t.Errorf("game directory = %q, want the NFC name %q", entries[0].Name(), nfcGame)
+			}
+		})
+	}
+}

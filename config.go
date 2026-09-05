@@ -4,10 +4,8 @@ import (
 	"fmt"
 	"os"
 
-	"git.nakama.town/fmartingr/gotoolkit/encoding"
+	"github.com/pelletier/go-toml/v2"
 )
-
-var encoder = encoding.NewTOMLEncoding()
 
 func Ptr[T any](v T) *T {
 	return &v
@@ -148,7 +146,7 @@ func NewConfig(path string) (*Config, error) {
 		return nil, fmt.Errorf("error reading config file: %w", err)
 	}
 
-	if err := encoder.Decode(data, config); err != nil {
+	if err := toml.Unmarshal(data, config); err != nil {
 		return nil, fmt.Errorf("error decoding config file: %w", err)
 	}
 
@@ -167,7 +165,7 @@ func NewConfig(path string) (*Config, error) {
 
 // Save saves the configuration back to a TOML file
 func (c *Config) Save(path string) error {
-	data, err := encoder.Encode(c)
+	data, err := toml.Marshal(c)
 	if err != nil {
 		return err
 	}

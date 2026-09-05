@@ -9,7 +9,6 @@ import (
 	"strings"
 	"time"
 
-	toolkitPaths "git.nakama.town/fmartingr/gotoolkit/paths"
 	"github.com/barasher/go-exiftool"
 	"github.com/gosimple/slug"
 )
@@ -203,7 +202,7 @@ func (p *XboxGameBarProvider) FindGames(options ProviderConfig) ([]Game, error) 
 // getScreenshotsPath returns the path where Xbox Game Bar screenshots are stored
 func (p *XboxGameBarProvider) getScreenshotsPath() (string, error) {
 	if p.xboxConfig.GetPath() != "" && p.xboxConfig.GetPath() != "auto" {
-		return toolkitPaths.ExpandUser(p.xboxConfig.GetPath()), nil
+		return expandUser(p.xboxConfig.GetPath()), nil
 	}
 
 	// Default path for Xbox Game Bar captures
