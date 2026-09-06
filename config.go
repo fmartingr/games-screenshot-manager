@@ -118,6 +118,7 @@ type SteamConfig struct {
 	UserID            string            `toml:"user_id"`
 	APIKey            string            `toml:"api_key"`
 	CustomGames       map[string]string `toml:"custom_games"`
+	IgnoredGames      []string          `toml:"ignored_games"`
 }
 
 func (c *SteamConfig) GetPath() string {

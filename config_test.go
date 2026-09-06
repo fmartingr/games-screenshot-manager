@@ -32,6 +32,7 @@ path = "test_minecraft_path"
 userdata_path = "test_steam_userdata"
 recordings_path = "test_steam_recordings"
 custom_games = { "1234567890" = "Test Game" }
+ignored_games = ["4148250", "4597250"]
 `
 
 	err := os.WriteFile(testConfigPath, []byte(testConfig), 0644)
@@ -57,6 +58,7 @@ custom_games = { "1234567890" = "Test Game" }
 	require.True(t, config.Providers.Steam.IsEnabled(), "Steam provider should be enabled by default")
 	require.Len(t, config.Providers.Steam.CustomGames, 1)
 	require.Equal(t, "Test Game", config.Providers.Steam.CustomGames["1234567890"])
+	require.Equal(t, []string{"4148250", "4597250"}, config.Providers.Steam.IgnoredGames)
 }
 
 func TestConfigSave(t *testing.T) {

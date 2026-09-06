@@ -363,3 +363,23 @@ func (b *GalleryBuilder) buildSite(node *GalleryNode) {
 		}
 	}
 }
+
+// Requirements reports the external programs the gallery needs. Both are for
+// video, so a gallery of screenshots alone needs neither.
+func (b *GalleryBuilder) Requirements() []Requirement {
+	requirements := []Requirement{{
+		Binary:  "ffmpeg",
+		Package: "ffmpeg",
+		Reason:  "makes the thumbnail for a video",
+	}}
+
+	if b.Config.Gallery.ShowVideoDuration {
+		requirements = append(requirements, Requirement{
+			Binary:  "ffprobe",
+			Package: "ffmpeg",
+			Reason:  "reads the length of a video, to show it on the thumbnail",
+		})
+	}
+
+	return requirements
+}

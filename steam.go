@@ -17,12 +17,30 @@ import (
 var _ Provider = (*SteamProvider)(nil)
 
 type SteamProvider struct {
-	config      Config
-	steamConfig SteamConfig
-	log         *slog.Logger
-	client      *SteamClient
-	gameManager *GameManager
-	fileManager *FileManager
+	config       Config
+	steamConfig  SteamConfig
+	log          *slog.Logger
+	client       *SteamClient
+	gameManager  *GameManager
+	fileManager  *FileManager
+	ignoredGames map[string]struct{}
+}
+
+// newIgnoredGamesSet builds the lookup set for the app IDs ignored_games
+// holds. An entry is trimmed, and an empty entry is dropped.
+func newIgnoredGamesSet(gameIDs []string) map[string]struct{} {
+	ignored := make(map[string]struct{}, len(gameIDs))
+
+	for _, gameID := range gameIDs {
+		gameID = strings.TrimSpace(gameID)
+		if gameID == "" {
+			continue
+		}
+
+		ignored[gameID] = struct{}{}
+	}
+
+	return ignored
 }
 
 func NewSteamProvider(config Config, gameManager *GameManager, fileManager *FileManager) (*SteamProvider, error) {
@@ -38,12 +56,13 @@ func NewSteamProvider(config Config, gameManager *GameManager, fileManager *File
 	}
 
 	steamProvider := &SteamProvider{
-		config:      config,
-		steamConfig: config.Providers.Steam,
-		log:         slog.Default().With("provider", "steam"),
-		client:      client,
-		gameManager: gameManager,
-		fileManager: fileManager,
+		config:       config,
+		steamConfig:  config.Providers.Steam,
+		log:          slog.Default().With("provider", "steam"),
+		client:       client,
+		gameManager:  gameManager,
+		fileManager:  fileManager,
+		ignoredGames: newIgnoredGamesSet(config.Providers.Steam.IgnoredGames),
 	}
 
 	return steamProvider, nil
@@ -134,6 +153,11 @@ func (p *SteamProvider) GetPublishedScreenshots() error {
 
 		appIDString := fmt.Sprintf("%d", screenshot.AppID)
 
+		if p.isIgnored(appIDString) {
+			p.log.Info("Skipping ignored game", slog.String("game_id", appIDString))
+			continue
+		}
+
 		gameName := p.resolveGameName(appIDString)
 		if gameName == "" {
 			p.log.Warn("No game name found for app ID, using app ID as game name", slog.Int("app_id", screenshot.AppID))
@@ -180,6 +204,11 @@ func (p *SteamProvider) GetScreenshots() error {
 		}
 
 		for _, file := range files {
+			if p.isIgnored(file.Name()) {
+				p.log.Info("Skipping ignored game", slog.String("game_id", file.Name()))
+				continue
+			}
+
 			gameName := p.resolveGameName(file.Name())
 
 			// If game name is empty, use the folder name
@@ -257,6 +286,14 @@ func (p *SteamProvider) resolveGameName(gameID string) string {
 	}
 
 	return p.client.GetGameName(gameID)
+}
+
+// isIgnored reports an app ID the configuration asks the provider to skip. An
+// ignored game never reaches the GameManager, so it gets no directory, no
+// media file and no cover.
+func (p *SteamProvider) isIgnored(gameID string) bool {
+	_, ignored := p.ignoredGames[gameID]
+	return ignored
 }
 
 // getSteamBasePath returns the base path for the Steam installation

@@ -43,6 +43,14 @@ Run the `games-screenshot-manager` command:
 games-screenshot-manager -config ./config.toml
 ```
 
+Check the setup before a run with the `doctor` subcommand:
+
+```
+games-screenshot-manager doctor -config ./config.toml
+```
+
+It reports the enabled providers, the paths they read, and the external programs they need. It changes no file, and it exits 1 when a check fails.
+
 If no `-config` flag is provided, the binary will look for a `config.toml` file in the user configuration directory, which varies by system:
 
 - Linux: `$XDG_CONFIG_HOME/games-screenshot-manager/config.toml`
@@ -95,7 +103,11 @@ If no `-config` flag is provided, the binary will look for a `config.toml` file 
 - **Recordings**: No
 - **Covers**: Yes, auto-downloads the header from Steam
 
-Also supports downloading screenshots uploaded to Steam by specifying `steam_user_id` and `api_key` in appropiate sections in [the config file](./config.example.toml).
+Games can be skipped with `ignored_games` in [the config file](./config.example.toml), which takes a list of Steam app IDs. A skipped game gets no folder, no screenshots and no cover.
+
+Game names come from the Steam app list. That list holds no demo, so the name of a demo is asked of the Steam store one app ID at a time, and the answer is cached.
+
+Screenshots you published to the Steam online gallery are downloaded as well. Set `online_gallery = true`, `user_id` and `api_key` under `[providers.steam]` in [the config file](./config.example.toml).
 
 ### World of Warcraft
 
@@ -113,7 +125,13 @@ Also supports downloading screenshots uploaded to Steam by specifying `steam_use
 
 ## Requirements
 
-- [exiftool](https://exiftool.org/) to parse EXIF data from files. (Using [baransher/go-exiftool library](https://github.com/barasher/go-exiftool)) This is required for the **PlayStation 4**, **Guild Wars 2** and **Xbox Game Bar** providers.
+Each program is needed only by the features that call it. Run `games-screenshot-manager doctor` to see which ones your configuration needs.
+
+| Program | Package | Needed by |
+| --- | --- | --- |
+| `exiftool` | [exiftool](https://exiftool.org/) | **PlayStation 4**, **Guild Wars 2** and **Xbox Game Bar**, to read the capture date from a screenshot. (Using the [barasher/go-exiftool library](https://github.com/barasher/go-exiftool)) |
+| `ffprobe` | ffmpeg | **PlayStation 5**, to read the length of a clip. The gallery also uses it to show that length. |
+| `ffmpeg` | ffmpeg | The gallery, to make the thumbnail for a video. |
 
 ## What about Nintendo Switch?
 

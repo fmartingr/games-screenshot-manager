@@ -21,6 +21,7 @@ download_covers = true
 # This section is used to set up the gallery generation. Once all your media files are copied to the
 # destionation folder this will generate thumbnails and index.html in the folders so you can upload
 # your output folder to a static hosting and have your screenshots deployed in a nice and minimal gallery.
+# A video needs `ffmpeg` for its thumbnail, and `ffprobe` for its duration. Both ship in the ffmpeg package.
 [gallery]
 # Enables the gallery generation.
 create = false
@@ -55,6 +56,7 @@ FooterText = "fmartingr's personal screenshot collection, copyright their respec
 # all providers or in platforms the games is not available.
 
 # GUILD WARS 2
+# This provider needs `exiftool` on your system.
 [providers.guild_wars_2]
 # Enable/disable the provider.
 enabled = false
@@ -82,6 +84,7 @@ enabled = false
 path = "auto"
 
 # PLAYSTATION 4
+# This provider needs `exiftool` on your system.
 [providers.playstation4]
 # Enable/disable the provider.
 enabled = false
@@ -91,6 +94,7 @@ enabled = false
 path = ""
 
 # PLAYSTATION 5
+# This provider needs `ffprobe`, which the ffmpeg package ships.
 [providers.playstation5]
 # Enable/disable the provider.
 enabled = false
@@ -118,6 +122,13 @@ user_id = ""
 # This option will specify the Steam API key. Get yours at https://steamcommunity.com/dev/apikey
 api_key = ""
 
+# This option lists the Steam app IDs to skip. A game listed here gets no folder,
+# no screenshots and no cover. Use it for a demo, a tool, or any game you do not
+# want in your collection. The ID is the folder name under
+# `userdata/<user>/760/remote`, and it is also what the gallery shows as the title
+# when the name cannot be resolved.
+ignored_games = ["4148250", "4597250"]
+
 # This option will specify names to use for games in the format:
 # "game id" = "Game name"
 # A name set here always takes precedence over the default Steam store name, so you can use it to both:
@@ -137,6 +148,7 @@ enabled = false
 path = "auto"
 
 # XBOX GAME BAR
+# This provider needs `exiftool` on your system.
 [providers.xbox_game_bar]
 # Enable/disable the provider.
 enabled = false

@@ -16,6 +16,31 @@ type Provider interface {
 	Run() error
 }
 
+// Requirement is one external program a provider needs.
+type Requirement struct {
+	// Binary is the program to look for, as in "ffprobe".
+	Binary string
+	// Package is what the user installs to get it. The ffmpeg package ships
+	// ffprobe, so the two names differ.
+	Package string
+	// Reason is why the provider needs the program, in one short phrase.
+	Reason string
+}
+
+// Requirer is an optional interface. A provider that needs an external program
+// implements it, and a provider that needs none does not. The method sits on
+// the provider, so a requirement can depend on that provider's own config.
+type Requirer interface {
+	Requirements() []Requirement
+}
+
+// RequirementUse is one provider's need for one external program.
+type RequirementUse struct {
+	// Provider is the name the registry holds, or "gallery".
+	Provider    string
+	Requirement Requirement
+}
+
 type MediaKind string
 
 const (

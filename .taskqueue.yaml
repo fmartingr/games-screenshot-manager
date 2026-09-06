@@ -103,3 +103,6 @@ labels:
   component/config:
     color: "#c2e0c6"
     display_name: Config
+  provider/steam:
+    color: "#000000"
+    display_name: Steam

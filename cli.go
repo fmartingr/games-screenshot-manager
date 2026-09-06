@@ -20,6 +20,16 @@ var levelMap = map[string]slog.Level{
 
 // RunCLI starts the command line interface
 func RunCLI() error {
+	// The subcommand comes off the argument list before the flags are parsed,
+	// so "doctor -config <path>" reaches the same flags a run takes.
+	args := os.Args[1:]
+
+	doctorMode := false
+	if len(args) > 0 && args[0] == "doctor" {
+		doctorMode = true
+		args = args[1:]
+	}
+
 	var configPath string
 	var onlyBuildGallery bool
 	var dryRun bool
@@ -27,7 +37,10 @@ func RunCLI() error {
 	flag.BoolVar(&onlyBuildGallery, "only-build-gallery", false, "Only build the gallery and avoid processing games")
 	flag.BoolVar(&dryRun, "dry-run", false, "Dry run mode")
 	logLevel := flag.String("log", "info", "Log level")
-	flag.Parse()
+
+	if err := flag.CommandLine.Parse(args); err != nil {
+		return fmt.Errorf("failed to parse the arguments: %w", err)
+	}
 
 	if configPath == "" {
 		userConfigDir, err := os.UserConfigDir()
@@ -46,6 +59,9 @@ func RunCLI() error {
 		tint.NewHandler(os.Stdout, &tint.Options{
 			Level:      levelMap[*logLevel],
 			TimeFormat: time.Kitchen,
+			// The log follows the same rule as the report: a terminal gets
+			// colour, a pipe and NO_COLOR do not.
+			NoColor: !takesColor(os.Stdout),
 		}),
 	))
 
@@ -56,6 +72,19 @@ func RunCLI() error {
 	}
 
 	config.DryRun = dryRun
+
+	// The doctor reports on the configuration and the system. It changes
+	// nothing, so it returns before any provider runs.
+	if doctorMode {
+		results := RunDoctor(config, configPath)
+		PrintChecks(os.Stdout, results)
+
+		if HasFailure(results) {
+			return fmt.Errorf("the doctor found %d failed checks", CountFailures(results))
+		}
+
+		return nil
+	}
 
 	gameManager := NewGameManager()
 	fileManager := NewFileManager(*config)

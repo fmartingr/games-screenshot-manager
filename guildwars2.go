@@ -143,3 +143,8 @@ func (p *GuildWars2Provider) getScreenshotsPath() (string, error) {
 
 	return "", fmt.Errorf("for non-windows systems the path to the screenshots folder must be provided")
 }
+
+// Requirements reports the external programs this provider needs.
+func (p *GuildWars2Provider) Requirements() []Requirement {
+	return []Requirement{exiftoolRequirement}
+}

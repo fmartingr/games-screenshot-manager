@@ -216,3 +216,8 @@ func (p *XboxGameBarProvider) getScreenshotsPath() (string, error) {
 
 	return "", fmt.Errorf("path to Xbox Game Bar screenshots folder must be provided")
 }
+
+// Requirements reports the external programs this provider needs.
+func (p *XboxGameBarProvider) Requirements() []Requirement {
+	return []Requirement{exiftoolRequirement}
+}

@@ -9,14 +9,30 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 const (
 	steamAppListURL    = "https://api.steampowered.com/IStoreService/GetAppList/v1/"
 	steamGameHeaderURL = "https://cdn.cloudflare.steamstatic.com/steam/apps/%s/header.jpg"
+
+	// The app list holds no app of type "demo", and no request flag adds one.
+	// This endpoint answers for a single app ID of any type, and it needs no
+	// API key.
+	steamAppDetailsURL = "https://store.steampowered.com/api/appdetails"
+
+	// How long a name from steamAppDetailsURL is kept. A name almost never
+	// changes, and the lookup is one request per app ID.
+	steamAppNameTTL = 30 * 24 * time.Hour
+
+	// How long an empty answer is kept. An ID with no store app is either a
+	// non-Steam shortcut or a delisted app, so the answer is stable, but it is
+	// cheap to ask again.
+	steamAppNameMissTTL = 24 * time.Hour
 
 	// API endpoints for published screenshots
 	steamGetPublishedFilesURL = "https://api.steampowered.com/IPublishedFileService/GetUserFiles/v1/"
@@ -77,6 +93,22 @@ type SteamFileDetailsResponse struct {
 	} `json:"response"`
 }
 
+// steamAppIDPattern is what a Steam app ID looks like. A folder name on disk
+// supplies the ID, and the ID becomes part of a cache key, so anything else is
+// refused before a request is made.
+var steamAppIDPattern = regexp.MustCompile(`^[0-9]+$`)
+
+// steamAppDetails is the part of the appdetails response this tool reads. The
+// response is a map keyed by the app ID that was asked for. A Success of false
+// is an answer: the ID is not a store app.
+type steamAppDetails struct {
+	Success bool `json:"success"`
+	Data    struct {
+		Name string `json:"name"`
+		Type string `json:"type"`
+	} `json:"data"`
+}
+
 // SteamApp struct for game details
 type SteamApp struct {
 	AppID uint64 `json:"appid"`
@@ -127,6 +159,15 @@ type SteamClient struct {
 	steamApps   SteamAppList
 	apiKey      string
 	fileManager *FileManager
+
+	// appDetailsURL is the endpoint a single app ID is looked up at. It is a
+	// field so a test can point it at a local server.
+	appDetailsURL string
+
+	// The app list is downloaded the first time a name is asked for. A command
+	// that builds a provider without reading a name pays nothing for it.
+	appsOnce sync.Once
+	appsErr  error
 }
 
 // NewSteamClient creates a new Steam client
@@ -138,19 +179,32 @@ func NewSteamClient(fileManager *FileManager, apiKey string) (*SteamClient, erro
 	}
 
 	client := &SteamClient{
-		log:         slog.Default().With("component", "steam-client"),
-		cache:       steamCache,
-		fileManager: fileManager,
-		apiKey:      apiKey,
+		log:           slog.Default().With("component", "steam-client"),
+		cache:         steamCache,
+		fileManager:   fileManager,
+		apiKey:        apiKey,
+		appDetailsURL: steamAppDetailsURL,
 	}
-
-	if err := client.DownloadSteamAppList(); err != nil {
-		return nil, fmt.Errorf("error downloading steam app list: %s", err)
-	}
-
-	client.log.Info("Steam app list ready", slog.Int("num_apps", len(client.steamApps.Apps)))
 
 	return client, nil
+}
+
+// ensureAppList downloads the app list once. A failure is reported once as
+// well, and it is not fatal: a name is then asked of the store, one app ID at
+// a time.
+func (c *SteamClient) ensureAppList() error {
+	c.appsOnce.Do(func() {
+		if c.appsErr = c.DownloadSteamAppList(); c.appsErr != nil {
+			c.log.Error("could not download the Steam app list, so every name comes from the store",
+				slog.String("err", c.appsErr.Error()))
+
+			return
+		}
+
+		c.log.Info("Steam app list ready", slog.Int("num_apps", len(c.steamApps.Apps)))
+	})
+
+	return c.appsErr
 }
 
 // SetAPIKey sets the Steam Web API key for authenticated requests
@@ -357,16 +411,137 @@ func (c *SteamClient) DownloadSteamAppList() error {
 
 // GetSteamApps returns the current list of Steam apps
 func (c *SteamClient) GetSteamApps() SteamAppList {
+	_ = c.ensureAppList()
+
 	return c.steamApps
 }
 
-// GetGameName returns the name of a game by its ID
+// GetGameName returns the name of a game by its ID. The app list is the first
+// source. It holds no demo, so a miss asks the store for that one app ID.
 func (c *SteamClient) GetGameName(gameID string) string {
-	return c.steamApps.GetGameName(gameID)
+	_ = c.ensureAppList()
+
+	if name := c.steamApps.GetGameName(gameID); name != "" {
+		return name
+	}
+
+	return c.lookupAppName(gameID)
+}
+
+// lookupAppName returns the store name for one app ID and remembers the
+// answer. An empty name is cached as well, so an ID with no store app makes
+// one request rather than one per run.
+//
+// A failure returns an empty string. The caller falls back to the folder name,
+// which is the behaviour without this lookup.
+func (c *SteamClient) lookupAppName(gameID string) string {
+	if !steamAppIDPattern.MatchString(gameID) {
+		return ""
+	}
+
+	cacheKey := "steam-appname-" + gameID
+
+	cached, err := c.cache.Get(cacheKey)
+	if err == nil {
+		c.log.Debug("Using the cached app name", slog.String("game_id", gameID))
+		return string(cached)
+	}
+
+	if !errors.Is(err, errCacheKeyNotFound) {
+		c.log.Warn("could not read the cached app name", slog.String("game_id", gameID), slog.String("err", err.Error()))
+	}
+
+	name, ok := c.downloadAppName(gameID)
+	if !ok {
+		return ""
+	}
+
+	ttl := steamAppNameTTL
+	if name == "" {
+		ttl = steamAppNameMissTTL
+	}
+
+	// The cache only saves the next request. Losing it must not lose the name.
+	if err := c.cache.Set(cacheKey, []byte(name), ttl); err != nil {
+		c.log.Warn("could not cache the app name", slog.String("game_id", gameID), slog.String("err", err.Error()))
+	}
+
+	return name
+}
+
+// downloadAppName asks the store for one app ID. The second return value
+// reports an answer that is worth caching: a request that failed says nothing
+// about the app ID, so it must not be stored as a miss.
+func (c *SteamClient) downloadAppName(gameID string) (string, bool) {
+	endpoint := c.appDetailsURL
+	if endpoint == "" {
+		endpoint = steamAppDetailsURL
+	}
+
+	parsedURL, err := url.Parse(endpoint)
+	if err != nil {
+		c.log.Warn("could not parse the app details URL", slog.String("err", err.Error()))
+		return "", false
+	}
+
+	queryParams := parsedURL.Query()
+	queryParams.Set("appids", gameID)
+	queryParams.Set("filters", "basic")
+	parsedURL.RawQuery = queryParams.Encode()
+
+	request, err := http.NewRequest(http.MethodGet, parsedURL.String(), nil)
+	if err != nil {
+		c.log.Warn("could not build the app details request", slog.String("err", err.Error()))
+		return "", false
+	}
+	request.Header.Set("User-Agent", "github.com/fmartingr/games-screenshot-manager")
+
+	c.log.Debug("Looking up an app name in the Steam store", slog.String("game_id", gameID))
+
+	response, err := http.DefaultClient.Do(request)
+	if err != nil {
+		c.log.Warn("could not request the app details", slog.String("game_id", gameID), slog.String("err", err.Error()))
+		return "", false
+	}
+	defer response.Body.Close()
+
+	// The endpoint is rate limited. A refusal is about the request, not about
+	// the app ID, so it is not cached.
+	if response.StatusCode < 200 || response.StatusCode >= 300 {
+		c.log.Warn("the app details request failed", slog.String("game_id", gameID), slog.Int("status_code", response.StatusCode))
+		return "", false
+	}
+
+	payload, err := io.ReadAll(response.Body)
+	if err != nil {
+		c.log.Warn("could not read the app details response", slog.String("game_id", gameID), slog.String("err", err.Error()))
+		return "", false
+	}
+
+	details := map[string]steamAppDetails{}
+	if err := json.Unmarshal(payload, &details); err != nil {
+		c.log.Warn("could not parse the app details response", slog.String("game_id", gameID), slog.String("err", err.Error()))
+		return "", false
+	}
+
+	entry, found := details[gameID]
+	if !found || !entry.Success {
+		c.log.Debug("The Steam store holds no app for this ID", slog.String("game_id", gameID))
+		return "", true
+	}
+
+	c.log.Info("Resolved an app name from the Steam store",
+		slog.String("game_id", gameID),
+		slog.String("name", entry.Data.Name),
+		slog.String("type", entry.Data.Type))
+
+	return entry.Data.Name, true
 }
 
 // GetGameID returns the ID of a game by its name
 func (c *SteamClient) GetGameID(gameName string) string {
+	_ = c.ensureAppList()
+
 	return c.steamApps.GetGameID(gameName)
 }
 

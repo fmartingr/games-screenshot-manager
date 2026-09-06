@@ -159,3 +159,13 @@ func (p *Playstation5Provider) getScreenshotsPath() (string, error) {
 
 	return "", fmt.Errorf("path to PlayStation 5 screenshots folder must be provided")
 }
+
+// Requirements reports the external programs this provider needs. A clip is
+// named after the moment it ends, so its length dates it from its start.
+func (p *Playstation5Provider) Requirements() []Requirement {
+	return []Requirement{{
+		Binary:  "ffprobe",
+		Package: "ffmpeg",
+		Reason:  "reads the length of a clip, to date it from its start",
+	}}
+}

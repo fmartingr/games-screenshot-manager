@@ -63,3 +63,10 @@ func GetExifTags(path string) (map[string]string, error) {
 
 	return result, nil
 }
+
+// exiftoolRequirement is the program every provider that reads EXIF data needs.
+var exiftoolRequirement = Requirement{
+	Binary:  "exiftool",
+	Package: "exiftool",
+	Reason:  "reads the capture date from a screenshot",
+}

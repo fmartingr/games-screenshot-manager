@@ -179,3 +179,8 @@ func (p *Playstation4Provider) getScreenshotsPath() (string, error) {
 
 	return "", fmt.Errorf("path to PlayStation 4 screenshots folder must be provided")
 }
+
+// Requirements reports the external programs this provider needs.
+func (p *Playstation4Provider) Requirements() []Requirement {
+	return []Requirement{exiftoolRequirement}
+}

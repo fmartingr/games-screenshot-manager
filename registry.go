@@ -110,3 +110,26 @@ func (r *ProviderRegistry) registerProviders() error {
 
 	return nil
 }
+
+// Requirements returns every requirement the registered providers declare,
+// grouped by the program to look for. Two providers that want one program
+// therefore produce one key that holds two uses.
+func (r *ProviderRegistry) Requirements() map[string][]RequirementUse {
+	requirements := make(map[string][]RequirementUse)
+
+	for name, provider := range r.Providers {
+		requirer, ok := provider.(Requirer)
+		if !ok {
+			continue
+		}
+
+		for _, requirement := range requirer.Requirements() {
+			requirements[requirement.Binary] = append(requirements[requirement.Binary], RequirementUse{
+				Provider:    name,
+				Requirement: requirement,
+			})
+		}
+	}
+
+	return requirements
+}
