@@ -10,6 +10,7 @@ import (
 	"net/url"
 	"os"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -17,22 +18,38 @@ import (
 )
 
 const (
-	steamAppListURL    = "https://api.steampowered.com/IStoreService/GetAppList/v1/"
+	steamAppListURL = "https://api.steampowered.com/IStoreService/GetAppList/v1/"
+
+	// The legacy cover path. It holds one file per app ID and needs no lookup,
+	// but Steam serves it for older apps only. An app published under the
+	// per-revision asset scheme answers 404 here, so a 404 is not an error on
+	// its own: the store then supplies the real URL.
+	//
+	// The store answers for every app, so this path is not needed for
+	// correctness. It is kept because it is free. steamAppDetailsURL refuses
+	// with 429 after about 200 requests in 5 minutes, and it takes one request
+	// per app ID, so a large library that asked the store for every cover
+	// would be cut off part way through its first run.
 	steamGameHeaderURL = "https://cdn.cloudflare.steamstatic.com/steam/apps/%s/header.jpg"
 
 	// The app list holds no app of type "demo", and no request flag adds one.
 	// This endpoint answers for a single app ID of any type, and it needs no
-	// API key.
+	// API key. It reports the name and the cover URL together.
+	//
+	// It takes one app ID only. A comma separated list answers null. It is
+	// also rate limited to about 200 requests in 5 minutes, which is why an
+	// answer is cached and why the legacy cover path is tried first.
 	steamAppDetailsURL = "https://store.steampowered.com/api/appdetails"
 
-	// How long a name from steamAppDetailsURL is kept. A name almost never
-	// changes, and the lookup is one request per app ID.
-	steamAppNameTTL = 30 * 24 * time.Hour
+	// How long an answer from steamAppDetailsURL is kept. A name almost never
+	// changes, a cover URL changes when the publisher replaces the art, and
+	// the lookup is one request per app ID.
+	steamAppInfoTTL = 30 * 24 * time.Hour
 
 	// How long an empty answer is kept. An ID with no store app is either a
 	// non-Steam shortcut or a delisted app, so the answer is stable, but it is
 	// cheap to ask again.
-	steamAppNameMissTTL = 24 * time.Hour
+	steamAppInfoMissTTL = 24 * time.Hour
 
 	// API endpoints for published screenshots
 	steamGetPublishedFilesURL = "https://api.steampowered.com/IPublishedFileService/GetUserFiles/v1/"
@@ -101,12 +118,26 @@ var steamAppIDPattern = regexp.MustCompile(`^[0-9]+$`)
 // steamAppDetails is the part of the appdetails response this tool reads. The
 // response is a map keyed by the app ID that was asked for. A Success of false
 // is an answer: the ID is not a store app.
+//
+// HeaderImage is a complete URL, and it carries a content hash that only the
+// store knows. It is used as it arrives. A path built from the app ID is wrong
+// for any app published under the per-revision asset scheme, and the file is
+// not always named header.jpg.
 type steamAppDetails struct {
 	Success bool `json:"success"`
 	Data    struct {
-		Name string `json:"name"`
-		Type string `json:"type"`
+		Name        string `json:"name"`
+		Type        string `json:"type"`
+		HeaderImage string `json:"header_image"`
 	} `json:"data"`
+}
+
+// steamAppInfo is what one store lookup yields, and what one cache entry
+// holds. The name and the cover URL arrive in the same response, so they are
+// kept together and cost one request between them.
+type steamAppInfo struct {
+	Name     string `json:"name"`
+	CoverURL string `json:"cover_url"`
 }
 
 // SteamApp struct for game details
@@ -164,6 +195,10 @@ type SteamClient struct {
 	// field so a test can point it at a local server.
 	appDetailsURL string
 
+	// gameHeaderURL is the legacy cover path, with one %s for the app ID. It
+	// is a field so a test can point it at a local server.
+	gameHeaderURL string
+
 	// The app list is downloaded the first time a name is asked for. A command
 	// that builds a provider without reading a name pays nothing for it.
 	appsOnce sync.Once
@@ -184,6 +219,7 @@ func NewSteamClient(fileManager *FileManager, apiKey string) (*SteamClient, erro
 		fileManager:   fileManager,
 		apiKey:        apiKey,
 		appDetailsURL: steamAppDetailsURL,
+		gameHeaderURL: steamGameHeaderURL,
 	}
 
 	return client, nil
@@ -425,54 +461,102 @@ func (c *SteamClient) GetGameName(gameID string) string {
 		return name
 	}
 
-	return c.lookupAppName(gameID)
+	return c.lookupApp(gameID).Name
 }
 
-// lookupAppName returns the store name for one app ID and remembers the
-// answer. An empty name is cached as well, so an ID with no store app makes
-// one request rather than one per run.
+// GetGameCoverURL returns the store URL of a game's cover image, or an empty
+// string when the store holds no app for the ID. The app list carries no cover
+// URL, so this always asks the store, and the answer is cached.
+func (c *SteamClient) GetGameCoverURL(gameID string) string {
+	return c.lookupApp(gameID).CoverURL
+}
+
+// lookupApp returns the store record for one app ID. The cache answers first,
+// and a miss asks the store and remembers the answer.
 //
-// A failure returns an empty string. The caller falls back to the folder name,
-// which is the behaviour without this lookup.
-func (c *SteamClient) lookupAppName(gameID string) string {
+// A failure returns an empty record. The name then falls back to the folder
+// name, which is the behaviour without this lookup.
+func (c *SteamClient) lookupApp(gameID string) steamAppInfo {
+	if info, found := c.cachedApp(gameID); found {
+		return info
+	}
+
+	return c.refreshApp(gameID)
+}
+
+// steamAppInfoCacheKey names the cache entry that holds one app's record.
+func steamAppInfoCacheKey(gameID string) string {
+	return "steam-appinfo-" + gameID
+}
+
+// cachedApp returns the record the cache holds for one app ID. The second
+// return value reports whether the cache answered, which is what tells an
+// empty record apart from no record at all.
+func (c *SteamClient) cachedApp(gameID string) (steamAppInfo, bool) {
 	if !steamAppIDPattern.MatchString(gameID) {
-		return ""
+		return steamAppInfo{}, false
 	}
 
-	cacheKey := "steam-appname-" + gameID
+	cached, err := c.cache.Get(steamAppInfoCacheKey(gameID))
+	if err != nil {
+		if !errors.Is(err, errCacheKeyNotFound) {
+			c.log.Warn("could not read the cached app details", slog.String("game_id", gameID), slog.String("err", err.Error()))
+		}
 
-	cached, err := c.cache.Get(cacheKey)
-	if err == nil {
-		c.log.Debug("Using the cached app name", slog.String("game_id", gameID))
-		return string(cached)
+		return steamAppInfo{}, false
 	}
 
-	if !errors.Is(err, errCacheKeyNotFound) {
-		c.log.Warn("could not read the cached app name", slog.String("game_id", gameID), slog.String("err", err.Error()))
+	info := steamAppInfo{}
+	if err := json.Unmarshal(cached, &info); err != nil {
+		// A damaged entry is not an answer. Asking the store repairs it.
+		c.log.Debug("The cached app details could not be parsed", slog.String("game_id", gameID))
+
+		return steamAppInfo{}, false
 	}
 
-	name, ok := c.downloadAppName(gameID)
+	c.log.Debug("Using the cached app details", slog.String("game_id", gameID))
+
+	return info, true
+}
+
+// refreshApp asks the store for one app ID and remembers the answer, whatever
+// the cache holds. An empty record is cached as well, so an ID with no store
+// app makes one request rather than one per run.
+//
+// A failure returns an empty record and writes nothing.
+func (c *SteamClient) refreshApp(gameID string) steamAppInfo {
+	if !steamAppIDPattern.MatchString(gameID) {
+		return steamAppInfo{}
+	}
+
+	info, ok := c.downloadAppInfo(gameID)
 	if !ok {
-		return ""
+		return steamAppInfo{}
 	}
 
-	ttl := steamAppNameTTL
-	if name == "" {
-		ttl = steamAppNameMissTTL
+	ttl := steamAppInfoTTL
+	if info.Name == "" {
+		ttl = steamAppInfoMissTTL
+	}
+
+	payload, err := json.Marshal(info)
+	if err != nil {
+		c.log.Warn("could not encode the app details", slog.String("game_id", gameID), slog.String("err", err.Error()))
+		return info
 	}
 
 	// The cache only saves the next request. Losing it must not lose the name.
-	if err := c.cache.Set(cacheKey, []byte(name), ttl); err != nil {
-		c.log.Warn("could not cache the app name", slog.String("game_id", gameID), slog.String("err", err.Error()))
+	if err := c.cache.Set(steamAppInfoCacheKey(gameID), payload, ttl); err != nil {
+		c.log.Warn("could not cache the app details", slog.String("game_id", gameID), slog.String("err", err.Error()))
 	}
 
-	return name
+	return info
 }
 
-// downloadAppName asks the store for one app ID. The second return value
+// downloadAppInfo asks the store for one app ID. The second return value
 // reports an answer that is worth caching: a request that failed says nothing
 // about the app ID, so it must not be stored as a miss.
-func (c *SteamClient) downloadAppName(gameID string) (string, bool) {
+func (c *SteamClient) downloadAppInfo(gameID string) (steamAppInfo, bool) {
 	endpoint := c.appDetailsURL
 	if endpoint == "" {
 		endpoint = steamAppDetailsURL
@@ -481,7 +565,7 @@ func (c *SteamClient) downloadAppName(gameID string) (string, bool) {
 	parsedURL, err := url.Parse(endpoint)
 	if err != nil {
 		c.log.Warn("could not parse the app details URL", slog.String("err", err.Error()))
-		return "", false
+		return steamAppInfo{}, false
 	}
 
 	queryParams := parsedURL.Query()
@@ -492,16 +576,16 @@ func (c *SteamClient) downloadAppName(gameID string) (string, bool) {
 	request, err := http.NewRequest(http.MethodGet, parsedURL.String(), nil)
 	if err != nil {
 		c.log.Warn("could not build the app details request", slog.String("err", err.Error()))
-		return "", false
+		return steamAppInfo{}, false
 	}
 	request.Header.Set("User-Agent", "github.com/fmartingr/games-screenshot-manager")
 
-	c.log.Debug("Looking up an app name in the Steam store", slog.String("game_id", gameID))
+	c.log.Debug("Looking up an app in the Steam store", slog.String("game_id", gameID))
 
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
 		c.log.Warn("could not request the app details", slog.String("game_id", gameID), slog.String("err", err.Error()))
-		return "", false
+		return steamAppInfo{}, false
 	}
 	defer response.Body.Close()
 
@@ -509,33 +593,36 @@ func (c *SteamClient) downloadAppName(gameID string) (string, bool) {
 	// the app ID, so it is not cached.
 	if response.StatusCode < 200 || response.StatusCode >= 300 {
 		c.log.Warn("the app details request failed", slog.String("game_id", gameID), slog.Int("status_code", response.StatusCode))
-		return "", false
+		return steamAppInfo{}, false
 	}
 
 	payload, err := io.ReadAll(response.Body)
 	if err != nil {
 		c.log.Warn("could not read the app details response", slog.String("game_id", gameID), slog.String("err", err.Error()))
-		return "", false
+		return steamAppInfo{}, false
 	}
 
 	details := map[string]steamAppDetails{}
 	if err := json.Unmarshal(payload, &details); err != nil {
 		c.log.Warn("could not parse the app details response", slog.String("game_id", gameID), slog.String("err", err.Error()))
-		return "", false
+		return steamAppInfo{}, false
 	}
 
 	entry, found := details[gameID]
 	if !found || !entry.Success {
 		c.log.Debug("The Steam store holds no app for this ID", slog.String("game_id", gameID))
-		return "", true
+		return steamAppInfo{}, true
 	}
 
-	c.log.Info("Resolved an app name from the Steam store",
-		slog.String("game_id", gameID),
-		slog.String("name", entry.Data.Name),
-		slog.String("type", entry.Data.Type))
+	info := steamAppInfo{Name: entry.Data.Name, CoverURL: entry.Data.HeaderImage}
 
-	return entry.Data.Name, true
+	c.log.Info("Resolved an app from the Steam store",
+		slog.String("game_id", gameID),
+		slog.String("name", info.Name),
+		slog.String("type", entry.Data.Type),
+		slog.String("cover_url", info.CoverURL))
+
+	return info, true
 }
 
 // GetGameID returns the ID of a game by its name
@@ -545,15 +632,83 @@ func (c *SteamClient) GetGameID(gameName string) string {
 	return c.steamApps.GetGameID(gameName)
 }
 
-// DownloadGameCover downloads a game's cover image
+// DownloadGameCover downloads a game's cover image.
+//
+// Three URLs can answer, and they are tried in the order that costs least:
+//
+//  1. A cover URL the cache already holds. It costs no request, and it is what
+//     keeps an app whose legacy path is dead from probing that path every run.
+//  2. The legacy path. It needs no lookup, and Steam still serves it for older
+//     apps, so a library of them costs no store request at all.
+//  3. A fresh store lookup. This is the only source for an app published under
+//     the per-revision asset scheme, and it also repairs a cached URL whose art
+//     the publisher has replaced.
+//
+// Step 3 is skipped when the cache already reports that the store holds no app
+// for the ID, because that answer is not going to change within its TTL.
 func (c *SteamClient) DownloadGameCover(gameID string) (*os.File, error) {
-	coverURL := fmt.Sprintf(steamGameHeaderURL, gameID)
-	coverFile, err := c.fileManager.DownloadURL(coverURL)
-	if err != nil {
-		return nil, fmt.Errorf("error downloading cover: %s", err)
+	headerURL := c.gameHeaderURL
+	if headerURL == "" {
+		headerURL = steamGameHeaderURL
 	}
 
-	return coverFile, nil
+	var attempted []string
+	var lastErr error
+
+	// download reports the file on success. A URL that is empty, or that was
+	// tried already, is not requested again.
+	download := func(coverURL string) *os.File {
+		if coverURL == "" || slices.Contains(attempted, coverURL) {
+			return nil
+		}
+
+		attempted = append(attempted, coverURL)
+
+		file, err := c.fileManager.DownloadURL(coverURL)
+		if err != nil {
+			c.log.Debug("A cover URL did not answer",
+				slog.String("game_id", gameID),
+				slog.String("cover_url", coverURL),
+				slog.String("err", err.Error()))
+
+			lastErr = err
+
+			return nil
+		}
+
+		return file
+	}
+
+	cached, wasCached := c.cachedApp(gameID)
+
+	if file := download(cached.CoverURL); file != nil {
+		return file, nil
+	}
+
+	if file := download(fmt.Sprintf(headerURL, gameID)); file != nil {
+		return file, nil
+	}
+
+	// A cached record that names no cover URL is the store saying it holds no
+	// app for this ID. Asking again inside the TTL would be one request per
+	// run for an answer that is already known.
+	storeURL := cached.CoverURL
+	if !wasCached || cached.CoverURL != "" {
+		storeURL = c.refreshApp(gameID).CoverURL
+
+		if file := download(storeURL); file != nil {
+			return file, nil
+		}
+	}
+
+	switch {
+	case lastErr != nil && storeURL == "":
+		return nil, fmt.Errorf("error downloading cover: %s, and the Steam store reports no cover URL", lastErr)
+	case lastErr != nil:
+		return nil, fmt.Errorf("error downloading cover: %s", lastErr)
+	default:
+		return nil, fmt.Errorf("error downloading cover: the Steam store reports no cover URL for app %s", gameID)
+	}
 }
 
 // GetPublishedScreenshots retrieves all screenshots published by a Steam user
