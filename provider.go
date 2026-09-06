@@ -60,6 +60,7 @@ type Media struct {
 	SourceURL       string
 	SourcePath      string
 	DestinationName string
+	Subfolder       string
 	ComparisionFunc func(m MediaFile, destinationPath string) bool
 }
 
@@ -106,6 +107,12 @@ func (m *Media) GetKind() MediaKind {
 	return m.Kind
 }
 
+// GetSubfolder returns the folder below the game folder that holds the file. It
+// returns an empty string for a file that belongs in the game folder itself.
+func (m *Media) GetSubfolder() string {
+	return m.Subfolder
+}
+
 func (m *Media) IsLocal() bool {
 	return m.SourceURL == "" && m.SourcePath != ""
 }
@@ -137,6 +144,7 @@ type MediaFile interface {
 	GetDestinationName() string
 	SetDestinationName(destinationName string)
 	GetKind() MediaKind
+	GetSubfolder() string
 	IsLocal() bool
 	Compare(destinationPath string) bool
 }

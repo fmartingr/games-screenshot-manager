@@ -218,3 +218,81 @@ func TestFileManager_adoptExistingDirWithAnUncleanOutputPath(t *testing.T) {
 		})
 	}
 }
+
+// A PlayStation duplicate suffix puts two files of different content under one
+// destination name. The first run writes the second file under a hash suffix.
+// Every run after that must find that file and stop, not fail on a destination
+// that exists.
+func TestFileManager_ProcessMediaRepeatsAHashSuffixCopy(t *testing.T) {
+	base := t.TempDir()
+	sourceDir := t.TempDir()
+
+	first := filepath.Join(sourceDir, "a.jpg")
+	if err := os.WriteFile(first, []byte("first"), 0644); err != nil {
+		t.Fatalf("failed to create the first source file: %v", err)
+	}
+
+	second := filepath.Join(sourceDir, "b.jpg")
+	if err := os.WriteFile(second, []byte("second"), 0644); err != nil {
+		t.Fatalf("failed to create the second source file: %v", err)
+	}
+
+	manager := NewFileManager(Config{OutputPath: base})
+	gameDir := filepath.Join(base, "PlayStation 5", "Ghost of Tsushima")
+
+	for run := 1; run <= 3; run++ {
+		game := NewGame("Ghost of Tsushima", "Ghost of Tsushima", "PlayStation 5", ps5ID)
+
+		firstMedia := NewMedia(MediaKindScreenshot, first)
+		firstMedia.DestinationName = "2024-01-01_12-00-00.jpg"
+
+		secondMedia := NewMedia(MediaKindScreenshot, second)
+		secondMedia.DestinationName = "2024-01-01_12-00-00.jpg"
+
+		game.AddScreenshot(firstMedia)
+		game.AddScreenshot(secondMedia)
+
+		if err := manager.ProcessGame(game); err != nil {
+			t.Fatalf("run %d: ProcessGame() returned an error: %v", run, err)
+		}
+
+		entries, err := os.ReadDir(gameDir)
+		if err != nil {
+			t.Fatalf("run %d: failed to read the game directory: %v", run, err)
+		}
+
+		if len(entries) != 2 {
+			names := make([]string, 0, len(entries))
+			for _, entry := range entries {
+				names = append(names, entry.Name())
+			}
+			t.Fatalf("run %d: expected two files, found %d: %q", run, len(entries), names)
+		}
+	}
+}
+
+// A capture the console named after a scene holds no time, so it keeps its own
+// name. Such a file goes below the game folder, out of the dated set.
+func TestFileManager_ProcessMediaPutsASubfolderBelowTheGame(t *testing.T) {
+	base := t.TempDir()
+
+	source := filepath.Join(t.TempDir(), "Main Menu.jpg")
+	if err := os.WriteFile(source, []byte("x"), 0644); err != nil {
+		t.Fatalf("failed to create the source file: %v", err)
+	}
+
+	manager := NewFileManager(Config{OutputPath: base})
+	game := NewGame("The Witcher 3", "The Witcher 3", "PlayStation 5", ps5ID)
+	media := NewMedia(MediaKindScreenshot, source)
+	media.DestinationName = "Undated_Main Menu.jpg"
+	media.Subfolder = "Other"
+
+	if err := manager.ProcessMedia(game, media); err != nil {
+		t.Fatalf("ProcessMedia() returned an error: %v", err)
+	}
+
+	want := filepath.Join(base, "PlayStation 5", "The Witcher 3", "Other", "Undated_Main Menu.jpg")
+	if _, err := os.Stat(want); err != nil {
+		t.Errorf("the file did not land at %q: %v", want, err)
+	}
+}

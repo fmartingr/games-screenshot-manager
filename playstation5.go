@@ -6,7 +6,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 var _ Provider = (*Playstation5Provider)(nil)
@@ -83,26 +82,38 @@ func (p *Playstation5Provider) GetScreenshots() error {
 				var mediaKind MediaKind
 
 				if extension == ".jpg" || extension == ".webm" {
-					parts := strings.Split(strings.TrimSuffix(fileName, extension), "_")
-					if len(parts) < 2 {
-						p.log.Warn("File does not follow naming convention", slog.String("file", fileName))
-						return nil
-					}
+					baseName := strings.TrimSuffix(fileName, extension)
 
-					// Get the last part which should be the timestamp
-					datetime, err := time.Parse(ps5FilenameLayout, parts[len(parts)-1])
+					var subfolder string
+
+					datetime, isDuplicate, err := parsePlaystationDatetime(baseName, ps5FilenameLayout)
 					if err != nil {
-						p.log.Warn("Error parsing datetime from filename", slog.String("file", fileName), slog.Any("error", err))
-						return nil
+						// The console names a capture after the scene the game
+						// reports, and such a name holds no time: "Main Menu.jpg".
+						// A PS5 JPEG carries no EXIF date, and the modification
+						// time is the time of the copy to the USB drive. The name
+						// is the only fact about the capture, so the file keeps it.
+						p.log.Info("Filename holds no capture time, the name is kept", slog.String("file", fileName))
+						destinationName = playstationUndatedPrefix + baseName
+						subfolder = playstationUndatedFolder
+					} else {
+						if isDuplicate {
+							// The file gets the destination name of the copy the
+							// counter counts from. The file manager decides on the
+							// content: a match is skipped, and a mismatch is written
+							// beside the first copy under a hash suffix.
+							p.log.Debug("Duplicate copy of a capture", slog.String("file", fileName))
+						}
+
+						if extension == ".webm" {
+							// Adjust the datetime by subtracting the video duration
+							// PS5 video filenames contain the end time of the clip, not the start time
+							datetime = AdjustDatetimeByVideoDuration(datetime, filePath)
+						}
+
+						destinationName = datetime.Format(DatetimeFormat)
 					}
 
-					if extension == ".webm" {
-						// Adjust the datetime by subtracting the video duration
-						// PS5 video filenames contain the end time of the clip, not the start time
-						datetime = AdjustDatetimeByVideoDuration(datetime, filePath)
-					}
-
-					destinationName = datetime.Format(DatetimeFormat)
 					if extension == ".jpg" {
 						mediaKind = MediaKindScreenshot
 					} else {
@@ -111,6 +122,7 @@ func (p *Playstation5Provider) GetScreenshots() error {
 
 					media := NewMedia(mediaKind, filePath)
 					media.DestinationName = destinationName + extension
+					media.Subfolder = subfolder
 
 					game := p.gameManager.AddGame(NewGame(gameName, gameName, ps5PlatformName, ps5ID))
 					game.AddScreenshot(media)

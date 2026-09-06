@@ -134,6 +134,10 @@ func (f *FileManager) ProcessMedia(game *Game, media MediaFile) error {
 		destinationPath = filepath.Join(destinationPath, "recordings")
 	}
 
+	if subfolder := media.GetSubfolder(); subfolder != "" {
+		destinationPath = filepath.Join(destinationPath, normalizeName(subfolder))
+	}
+
 	// Check if folder exists (create otherwise)
 	if _, err := os.Stat(destinationPath); os.IsNotExist(err) && !f.config.DryRun {
 		mkdirErr := os.MkdirAll(destinationPath, 0711)
@@ -154,17 +158,38 @@ func (f *FileManager) ProcessMedia(game *Game, media MediaFile) error {
 			destinationName := mediaName
 			extestion := filepath.Ext(destinationName)
 			destinationName = strings.TrimSuffix(destinationName, extestion)
-			destinationName = fmt.Sprintf("%s_%s%s", destinationName, media.GetSourceHash(), extestion)
-			slog.Warn(
-				"media already exists but hash mismatch, renaming file",
-				slog.String("source_path", media.GetSourcePath()),
-				slog.String("source_url", media.GetSourceURL()),
-				slog.String("old_destination_path", destMediaPath),
-				slog.String("new_destination_path", destinationName),
-			)
+			// The hash is empty for a source that is not on disk yet. Remote
+			// media is downloaded further down, after this point.
+			sourceHash := media.GetSourceHash()
+			destinationName = fmt.Sprintf("%s_%s%s", destinationName, sourceHash, extestion)
+			oldDestMediaPath := destMediaPath
 			media.SetDestinationName(destinationName)
 			mediaName = destinationName
 			destMediaPath = filepath.Join(destinationPath, mediaName)
+
+			// The hash of the source is in the name, so a file at the new path
+			// holds this exact content. A later run finds it and stops here,
+			// instead of a failure on a destination that exists. The message is
+			// a debug one, because every run after the first repeats it. An
+			// empty hash names no content, so it cannot stand for the file.
+			if sourceHash != "" && f.FileExists(destMediaPath) {
+				f.log.Debug(
+					"media already exists under its hash name, skipping",
+					slog.String("source_path", media.GetSourcePath()),
+					slog.String("source_url", media.GetSourceURL()),
+					slog.String("destination_path", destMediaPath),
+				)
+
+				return nil
+			}
+
+			slog.Info(
+				"media already exists but hash mismatch, renaming file",
+				slog.String("source_path", media.GetSourcePath()),
+				slog.String("source_url", media.GetSourceURL()),
+				slog.String("old_destination_path", oldDestMediaPath),
+				slog.String("new_destination_path", destinationName),
+			)
 		} else {
 			slog.Warn(
 				"cover already exists but hash mismatch, skipping",

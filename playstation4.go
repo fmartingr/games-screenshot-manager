@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/barasher/go-exiftool"
@@ -83,9 +84,17 @@ func (p *Playstation4Provider) GetScreenshots() error {
 				fileName := filepath.Base(filePath)
 				extension := filepath.Ext(fileName)
 
+				// Ignore hidden files. A macOS AppleDouble stub beside a clip
+				// carries the same extension, and it is not a clip.
+				if strings.HasPrefix(fileName, ".") {
+					return nil
+				}
+
 				var media *Media
 
 				var destinationName string
+				var subfolder string
+
 				if extension == ".jpg" {
 					exifTags, err := GetExifTagsWithTool(et, filePath)
 					if err != nil {
@@ -101,21 +110,40 @@ func (p *Playstation4Provider) GetScreenshots() error {
 					destinationName = fileDate.Format(DatetimeFormat)
 					media = NewMedia(MediaKindScreenshot, filePath)
 				} else if extension == ".mp4" {
-					if len(fileName) >= len(ps4VideoLayout)+len(extension) {
-						videoDatetime, err := time.Parse(ps4VideoLayout, fileName[len(fileName)-len(extension)-len(ps4VideoLayout):len(fileName)-len(extension)])
-						if err != nil {
-							p.log.Warn("File does not follow datetime convention", slog.String("file", fileName))
-							return nil
-						}
-						destinationName = videoDatetime.Format(DatetimeFormat)
+					baseName := strings.TrimSuffix(fileName, extension)
+
+					videoDatetime, isDuplicate, err := parsePlaystationDatetime(baseName, ps4VideoLayout)
+					if err != nil {
+						// The console names a capture after the scene the game
+						// reports, and such a name holds no time. The name is the
+						// only fact about the capture, so the file keeps it.
+						p.log.Info("Filename holds no capture time, the name is kept", slog.String("file", fileName))
+						destinationName = playstationUndatedPrefix + baseName
+						subfolder = playstationUndatedFolder
 					} else {
-						p.log.Warn("File does not follow datetime convention", slog.String("file", fileName))
-						return nil
+						if isDuplicate {
+							// The file gets the destination name of the copy the
+							// counter counts from. The file manager decides on the
+							// content: a match is skipped, and a mismatch is written
+							// beside the first copy under a hash suffix.
+							p.log.Debug("Duplicate copy of a clip", slog.String("file", fileName))
+						}
+
+						destinationName = videoDatetime.Format(DatetimeFormat)
 					}
+
 					media = NewMedia(MediaKindClip, filePath)
 				}
 
+				// Neither branch above ran, so the extension is one this
+				// provider does not read.
+				if media == nil {
+					p.log.Debug("File is not a screenshot or a clip", slog.String("file", fileName))
+					return nil
+				}
+
 				media.DestinationName = destinationName + extension
+				media.Subfolder = subfolder
 
 				game := p.gameManager.AddGame(NewGame(gameName, gameName, ps4PlatformName, ps4ID))
 				game.AddScreenshot(media)
