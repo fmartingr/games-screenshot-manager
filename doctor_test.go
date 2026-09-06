@@ -441,3 +441,52 @@ func TestRunDoctor_CreatesNoDirectory(t *testing.T) {
 		t.Errorf("the doctor left %d entries under the cache home: %q", len(entries), names)
 	}
 }
+
+// The provider reads the console through the libmtp tools, so it cannot run
+// without them. A path in the config reads a folder instead, and then it needs
+// none of them.
+func TestRunDoctor_ReportsTheLibmtpToolsForNintendoSwitch2(t *testing.T) {
+	stubLookPath(t)
+
+	config := newDoctorConfig(t)
+	config.Providers.NintendoSwitch2.Enabled = Ptr(true)
+
+	results := RunDoctor(config, "config.toml")
+
+	for _, binary := range []string{"mtp-folders", "mtp-files", "mtp-connect"} {
+		result, found := findCheck(results, scopeDependencies, binary)
+		if !found {
+			t.Fatalf("the report holds no %s check", binary)
+		}
+
+		if result.Status != CheckFail {
+			t.Errorf("%s status = %q, want %q", binary, result.Status, CheckFail)
+		}
+
+		if !strings.Contains(result.Remedy, "libmtp") {
+			t.Errorf("%s remedy = %q, want it to name the libmtp package", binary, result.Remedy)
+		}
+	}
+
+	if !HasFailure(results) {
+		t.Error("HasFailure() = false, want true")
+	}
+}
+
+func TestRunDoctor_WantsNoLibmtpToolForAnAlbumFolder(t *testing.T) {
+	stubLookPath(t)
+
+	config := newDoctorConfig(t)
+	config.Providers.NintendoSwitch2.Enabled = Ptr(true)
+	config.Providers.NintendoSwitch2.Path = Ptr(t.TempDir())
+
+	results := RunDoctor(config, "config.toml")
+
+	if _, found := findCheck(results, scopeDependencies, "mtp-connect"); found {
+		t.Error("the report holds an mtp-connect check, and the provider reads a folder")
+	}
+
+	if HasFailure(results) {
+		t.Error("HasFailure() = true, want false")
+	}
+}

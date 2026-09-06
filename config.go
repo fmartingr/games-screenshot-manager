@@ -30,14 +30,15 @@ func (c *Config) Defaults() {
 
 // Providers represents all game provider configurations
 type Providers struct {
-	GuildWars2      ProviderConfig `toml:"guild_wars_2"`
-	Hytale          ProviderConfig `toml:"hytale"`
-	Minecraft       ProviderConfig `toml:"minecraft"`
-	PlayStation4    ProviderConfig `toml:"playstation4"`
-	PlayStation5    ProviderConfig `toml:"playstation5"`
-	Steam           SteamConfig    `toml:"steam"`
-	WorldOfWarcraft ProviderConfig `toml:"world_of_warcraft"`
-	XboxGameBar     ProviderConfig `toml:"xbox_game_bar"`
+	GuildWars2      ProviderConfig        `toml:"guild_wars_2"`
+	Hytale          ProviderConfig        `toml:"hytale"`
+	Minecraft       ProviderConfig        `toml:"minecraft"`
+	NintendoSwitch2 NintendoSwitch2Config `toml:"nintendo_switch_2"`
+	PlayStation4    ProviderConfig        `toml:"playstation4"`
+	PlayStation5    ProviderConfig        `toml:"playstation5"`
+	Steam           SteamConfig           `toml:"steam"`
+	WorldOfWarcraft ProviderConfig        `toml:"world_of_warcraft"`
+	XboxGameBar     ProviderConfig        `toml:"xbox_game_bar"`
 }
 
 // GlobalConfig represents the global configuration settings
@@ -107,6 +108,32 @@ func (pc *ProviderConfig) Merge(global *GlobalConfig) {
 	}
 }
 
+// switch2DefaultIgnoredFolders holds the album folder the console makes for
+// itself. It carries the captures taken outside a game, as in the Home menu and
+// the shop.
+//
+// The console names it in the language it is set to, so this default matches
+// one console only. A user on another language adds their own name.
+var switch2DefaultIgnoredFolders = []string{"Otra carpeta"}
+
+// NintendoSwitch2Config represents the Nintendo Switch 2 specific configuration
+type NintendoSwitch2Config struct {
+	ProviderConfig
+	IgnoredFolders []string `toml:"ignored_folders"`
+}
+
+// GetIgnoredFolders returns the album folders the provider skips.
+//
+// A key the config file does not hold takes the default. An empty list is a
+// choice, not an absence, so it copies every folder.
+func (c *NintendoSwitch2Config) GetIgnoredFolders() []string {
+	if c.IgnoredFolders == nil {
+		return switch2DefaultIgnoredFolders
+	}
+
+	return c.IgnoredFolders
+}
+
 // SteamConfig represents the Steam-specific configuration
 type SteamConfig struct {
 	ProviderConfig
@@ -160,6 +187,7 @@ func NewConfig(path string) (*Config, error) {
 	config.Providers.XboxGameBar.Merge(&config.Global)
 	config.Providers.GuildWars2.Merge(&config.Global)
 	config.Providers.Hytale.Merge(&config.Global)
+	config.Providers.NintendoSwitch2.Merge(&config.Global)
 
 	return config, nil
 }

@@ -11,6 +11,7 @@ A simple tool to collect and sort games screenshots from different platforms.
   - **Guild Wars 2**
   - **Hytale**
   - **Minecraft**
+  - **Nintendo Switch 2**
   - **PlayStation 4**
   - **PlayStation 5**
   - **World of Warcraft**
@@ -81,6 +82,26 @@ If no `-config` flag is provided, the binary will look for a `config.toml` file 
 - **Clips**: Not supported by the game
 - **Recordings**: Not supported by the game
 
+### Nintendo Switch 2
+
+- **Supported platforms**: Linux, to find the console over USB. Any platform with a custom path.
+- **Screenshots**: Yes
+- **Clips**: Yes
+- **Recordings**: Not supported by the console
+- **Covers**: No
+
+The console shares its album over MTP. Open the album on the console, copy it to a computer, and pick this computer. The console then appears on the USB bus as `057e:2061`, and the run finds it on its own.
+
+Every capture keeps the name the console gave it, as in `2025060720031600_s.jpg`. A `_c` file is a copy of a capture that already exists somewhere else, so it is never collected. A capture the output folder already holds stays on the console, so every run after the first one is quick.
+
+The console makes one album folder of its own for the captures taken outside a game. It names that folder in the language the console is set to, so the name lives in `ignored_folders` in [the config file](./config.example.toml) rather than in the code. The same list drops a game you do not want.
+
+Only one program at a time can hold an MTP device, and a desktop file manager takes the console as soon as it appears. Close the file manager, and eject the console from it, before the run.
+
+A program that dies while it holds the console leaves the session open, and nothing can read the album after that. Unplug the cable, plug it back, and share the album again.
+
+Set `path` to read an album folder that was already copied off a console, on any platform.
+
 ### PlayStation 4
 
 - **Supported platforms**: None, requires a custom path.
@@ -132,12 +153,15 @@ Each program is needed only by the features that call it. Run `games-screenshot-
 | `exiftool` | [exiftool](https://exiftool.org/) | **PlayStation 4**, **Guild Wars 2** and **Xbox Game Bar**, to read the capture date from a screenshot. (Using the [barasher/go-exiftool library](https://github.com/barasher/go-exiftool)) |
 | `ffprobe` | ffmpeg | **PlayStation 5**, to read the length of a clip. The gallery also uses it to show that length. |
 | `ffmpeg` | ffmpeg | The gallery, to make the thumbnail for a video. |
+| `mtp-folders`, `mtp-files`, `mtp-connect` | [libmtp](https://libmtp.sourceforge.net/) | **Nintendo Switch 2**, to list the album on the console and copy the captures off it. |
 
-## What about Nintendo Switch?
+## What about the first Nintendo Switch?
 
 This project initially started as a Nintendo Switch helper to import and properly organize Switch screenshots since their system was a mess, but Nintendo improved this over the years and now we can use Android File Transfer to easily get the screenshots from a Nintendo Switch with the proper game name as folder name and the screenshots sorted by date.
 
 For more information about this, [read this issue](https://github.com/RenanGreca/Switch-Screenshots/issues/46)
+
+The Nintendo Switch 2 has [a provider of its own](#nintendo-switch-2), which reads the console over USB.
 
 ## License
 

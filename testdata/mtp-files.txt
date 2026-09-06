@@ -1,0 +1,46 @@
+libmtp version: 1.1.23
+
+Device 0 (VID=057e and PID=2061) is a Nintendo Switch 2.
+mtp-files: Successfully connected
+LIBMTP WARNING: no MTP vendor extension on device 15 on bus 10LIBMTP WARNING: VendorExtensionID: ffffffffLIBMTP WARNING: VendorExtensionDesc: nintendo.com: 1.0; LIBMTP WARNING: this typically means the device is PTP (i.e. a camera) but not an MTP device at all. Trying to continue anyway.Listing File Information on Device with name: (NULL) [SN:HAE10027265351]
+File ID: 5906
+   Filename: 2026032619431800_s.jpg
+   File size 502016 (0x000000000007A900) bytes
+   Parent ID: 5905
+   Storage ID: 0x00040001
+   Filetype: JPEG file
+File ID: 5907
+   Filename: 2026032619513300_s.jpg
+   File size 1017088 (0x00000000000F8500) bytes
+   Parent ID: 5905
+   Storage ID: 0x00040001
+   Filetype: JPEG file
+File ID: 5908
+   Filename: 2026032619540900_s.jpg
+   File size 463104 (0x0000000000071100) bytes
+   Parent ID: 5905
+   Storage ID: 0x00040001
+   Filetype: JPEG file
+File ID: 5910
+   Filename: 2025073123214500_s.jpg
+   File size 877056 (0x00000000000D6200) bytes
+   Parent ID: 5909
+   Storage ID: 0x00040001
+   Filetype: JPEG file
+File ID: 5911
+   Filename: 2025073123075300_s.jpg
+   File size 705792 (0x00000000000AC500) bytes
+   Parent ID: 5909
+   Storage ID: 0x00040001
+   Filetype: JPEG file
+File ID: 5912
+   Filename: 2025073123052300_s.jpg
+   File size 549888 (0x0000000000086400) bytes
+   Parent ID: 5909
+   Storage ID: 0x00040001
+   Filetype: JPEG file
+File ID: 5913
+   Filename: 2025073123035400_s.jpg
+   File size 1153536 (0x0000000000119A00) bytes
+   Parent ID: 5909
+   Storage ID: 0x00040001

@@ -1,0 +1,12 @@
+LIBMTP WARNING: no MTP vendor extension on device 15 on bus 10LIBMTP WARNING: VendorExtensionID: ffffffffLIBMTP WARNING: VendorExtensionDesc: nintendo.com: 1.0; LIBMTP WARNING: this typically means the device is PTP (i.e. a camera) but not an MTP device at all. Trying to continue anyway.Attempting to connect device(s)
+Device 0 (VID=057e and PID=2061) is a Nintendo Switch 2.
+mtp-folders: Successfully connected
+Friendly name: (NULL)
+Storage: Album
+5905	MONSTER HUNTER STORIES 3: TWISTED REFLECTION Trial Version
+5909	The Adventures of Elliot: The Millennium Tales Debut Demo
+5930	Mario Kart World
+5954	Yakuza 0 Director's Cut
+5979	Demo de Star Wars Outlaws
+5981	Donkey Kong Bananza
+6297	FINAL FANTASY RESONANCE DEMO

@@ -348,7 +348,7 @@ func (f *FileManager) DownloadURL(url string) (tempFile *os.File, err error) {
 		return nil, fmt.Errorf("error creating temp file: %w", err)
 	}
 
-	f.cleanup = append(f.cleanup, func() {
+	f.AddCleanup(func() {
 		os.Remove(tempFile.Name())
 	})
 
@@ -358,6 +358,13 @@ func (f *FileManager) DownloadURL(url string) (tempFile *os.File, err error) {
 	}
 
 	return tempFile, nil
+}
+
+// AddCleanup registers work to do once the run is over. A provider that stages
+// a file outside the output tree removes it here, so the file lives as long as
+// the file manager needs to read it.
+func (f *FileManager) AddCleanup(cleanup func()) {
+	f.cleanup = append(f.cleanup, cleanup)
 }
 
 func (f *FileManager) Cleanup() error {

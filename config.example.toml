@@ -83,6 +83,38 @@ enabled = false
 # 'auto' will try to guess the path based on the platform.
 path = "auto"
 
+# NINTENDO SWITCH 2
+# This provider reads the album straight off the console over MTP.
+# It needs `mtp-folders`, `mtp-files` and `mtp-connect`, which the libmtp package ships.
+#
+# Share the album before the run: on the console, open the album, press the button
+# that copies to a computer, and pick the computer. The console then appears on the
+# USB bus as 057e:2061.
+#
+# Only one program at a time can hold the console. Close your file manager, and eject
+# the console from it, or the run cannot read the album.
+#
+# Every capture keeps the name the console gave it, as in 2025060720031600_s.jpg.
+# A "_c" file is a copy of a capture that already exists somewhere else, so it is
+# never collected.
+[providers.nintendo_switch_2]
+# Enable/disable the provider.
+enabled = false
+
+# This option will specify the path to an album folder that was already copied off
+# a console. Leave it as 'auto' to read the console over USB instead.
+path = "auto"
+
+# Album folders to skip.
+#
+# The console makes one album folder of its own for the captures taken outside a
+# game, as in the Home menu and the shop. It names that folder in the language the
+# console is set to, so the default below matches a console set to Spanish. Set your
+# own name here where it does not match.
+#
+# The list also drops a game you do not want. Set it to [] to collect every folder.
+ignored_folders = ["Otra carpeta"]
+
 # PLAYSTATION 4
 # This provider needs `exiftool` on your system.
 [providers.playstation4]

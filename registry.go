@@ -80,6 +80,15 @@ func (r *ProviderRegistry) registerProviders() error {
 		r.registerProvider("hytale", hytaleProvider)
 	}
 
+	if r.config.Providers.NintendoSwitch2.IsEnabled() {
+		nintendoSwitch2Provider, err := NewNintendoSwitch2Provider(*r.config, r.gameManager, r.fileManager)
+		if err != nil {
+			return fmt.Errorf("failed to create nintendo switch 2 provider: %w", err)
+		}
+
+		r.registerProvider("nintendo_switch_2", nintendoSwitch2Provider)
+	}
+
 	if r.config.Providers.PlayStation4.IsEnabled() {
 		playstation4Provider, err := NewPlaystation4Provider(*r.config, r.gameManager, r.fileManager)
 		if err != nil {
