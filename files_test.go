@@ -1,6 +1,11 @@
 package gamesscreenshotmanager
 
 import (
+	"crypto/sha1"
+	"encoding/hex"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
@@ -294,5 +299,85 @@ func TestFileManager_ProcessMediaPutsASubfolderBelowTheGame(t *testing.T) {
 	want := filepath.Join(base, "PlayStation 5", "The Witcher 3", "Other", "Undated_Main Menu.jpg")
 	if _, err := os.Stat(want); err != nil {
 		t.Errorf("the file did not land at %q: %v", want, err)
+	}
+}
+
+// Remote media is downloaded before its hash is read. The hash names the
+// content, so an empty one would put every run's file at the same name and the
+// second run would fail on a destination that already exists.
+func TestFileManager_ProcessMediaHashesRemoteMediaBeforeRenaming(t *testing.T) {
+	base := t.TempDir()
+
+	const remoteBody = "the new screenshot"
+
+	sum := sha1.Sum([]byte(remoteBody))
+	remoteHash := hex.EncodeToString(sum[:])
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprint(w, remoteBody)
+	}))
+	defer server.Close()
+
+	// Steam puts the file's SHA1 in the second to last path segment, and
+	// steamGalleryComparisonFunc reads it from there.
+	sourceURL := server.URL + "/ugc/" + remoteHash + "/screenshot.jpg"
+
+	gameDir := filepath.Join(base, "PC", "Terraria")
+	if err := os.MkdirAll(gameDir, 0755); err != nil {
+		t.Fatalf("failed to create the game directory: %v", err)
+	}
+
+	// A file of the same name is already there, holding different content.
+	taken := filepath.Join(gameDir, "2024-01-01_12-00-00.jpg")
+	if err := os.WriteFile(taken, []byte("the old screenshot"), 0644); err != nil {
+		t.Fatalf("failed to create the existing file: %v", err)
+	}
+
+	manager := NewFileManager(Config{OutputPath: base})
+	defer manager.Cleanup()
+
+	for run := 1; run <= 2; run++ {
+		game := NewGame("105600", "Terraria", "PC", "steam")
+
+		media := NewMedia(MediaKindScreenshot, "")
+		media.SetSourceURL(sourceURL)
+		media.DestinationName = "2024-01-01_12-00-00.jpg"
+		media.ComparisionFunc = steamGalleryComparisonFunc
+
+		if err := manager.ProcessMedia(game, media); err != nil {
+			t.Fatalf("run %d: ProcessMedia() returned an error: %v", run, err)
+		}
+	}
+
+	want := filepath.Join(gameDir, "2024-01-01_12-00-00_"+remoteHash+".jpg")
+	contents, err := os.ReadFile(want)
+	if err != nil {
+		entries, _ := os.ReadDir(gameDir)
+		names := make([]string, 0, len(entries))
+		for _, entry := range entries {
+			names = append(names, entry.Name())
+		}
+
+		t.Fatalf("the file did not land at %q: %v, the directory holds %q", want, err, names)
+	}
+
+	if string(contents) != remoteBody {
+		t.Errorf("the file holds %q, want %q", contents, remoteBody)
+	}
+
+	entries, err := os.ReadDir(gameDir)
+	if err != nil {
+		t.Fatalf("failed to read the game directory: %v", err)
+	}
+
+	// The file that was already there, and the one the runs added. A second
+	// run must not add a third.
+	if len(entries) != 2 {
+		names := make([]string, 0, len(entries))
+		for _, entry := range entries {
+			names = append(names, entry.Name())
+		}
+
+		t.Errorf("the directory holds %d files, want 2: %q", len(entries), names)
 	}
 }

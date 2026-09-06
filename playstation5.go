@@ -162,10 +162,15 @@ func (p *Playstation5Provider) getScreenshotsPath() (string, error) {
 
 // Requirements reports the external programs this provider needs. A clip is
 // named after the moment it ends, so its length dates it from its start.
+//
+// ffprobe is optional. Without it GetVideoDuration returns 0, and the clip
+// keeps the end time the console wrote. The clip is still collected.
 func (p *Playstation5Provider) Requirements() []Requirement {
 	return []Requirement{{
-		Binary:  "ffprobe",
-		Package: "ffmpeg",
-		Reason:  "reads the length of a clip, to date it from its start",
+		Binary:      "ffprobe",
+		Package:     "ffmpeg",
+		Reason:      "reads the length of a clip, to date it from its start",
+		Optional:    true,
+		Degradation: "a clip keeps its end time rather than its start time",
 	}}
 }

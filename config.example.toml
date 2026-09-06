@@ -127,7 +127,7 @@ api_key = ""
 # want in your collection. The ID is the folder name under
 # `userdata/<user>/760/remote`, and it is also what the gallery shows as the title
 # when the name cannot be resolved.
-ignored_games = ["4148250", "4597250"]
+# ignored_games = ["4148250", "4597250"]
 
 # This option will specify names to use for games in the format:
 # "game id" = "Game name"

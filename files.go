@@ -158,8 +158,21 @@ func (f *FileManager) ProcessMedia(game *Game, media MediaFile) error {
 			destinationName := mediaName
 			extestion := filepath.Ext(destinationName)
 			destinationName = strings.TrimSuffix(destinationName, extestion)
-			// The hash is empty for a source that is not on disk yet. Remote
-			// media is downloaded further down, after this point.
+
+			// The hash reads the source, so the source has to be on disk
+			// before the new name can be built. Remote media is downloaded
+			// here rather than further down: an empty hash would put every
+			// run's file at the same name, and the copy would then fail on a
+			// destination that already exists.
+			//
+			// A dry run downloads nothing, so its hash stays empty and the
+			// name it reports is not the final one.
+			if !f.config.DryRun {
+				if err := f.ensureLocalSource(media); err != nil {
+					return err
+				}
+			}
+
 			sourceHash := media.GetSourceHash()
 			destinationName = fmt.Sprintf("%s_%s%s", destinationName, sourceHash, extestion)
 			oldDestMediaPath := destMediaPath
@@ -205,13 +218,8 @@ func (f *FileManager) ProcessMedia(game *Game, media MediaFile) error {
 	if f.config.DryRun {
 		slog.Info("copy media", slog.String("src", media.GetSourcePath()), slog.String("dst", destMediaPath))
 	} else {
-		if !media.IsLocal() {
-			tempFile, err := f.DownloadURL(media.GetSourceURL())
-			if err != nil {
-				return fmt.Errorf("error downloading URL: %w", err)
-			}
-
-			media.SetSourcePath(tempFile.Name())
+		if err := f.ensureLocalSource(media); err != nil {
+			return err
 		}
 
 		_, err := f.copyFile(media.GetSourcePath(), filepath.Join(destinationPath, mediaName))
@@ -219,6 +227,27 @@ func (f *FileManager) ProcessMedia(game *Game, media MediaFile) error {
 			return fmt.Errorf("error copying media %s -> %s: %s", media.GetSourcePath(), destMediaPath, err)
 		}
 	}
+
+	return nil
+}
+
+// ensureLocalSource puts a remote media file on disk, so its content can be
+// read and copied. It does nothing for a source that is already there, so it
+// is safe to call more than once.
+//
+// A source path is the test, not IsLocal. IsLocal stays false after a
+// download, because the URL the file came from is kept.
+func (f *FileManager) ensureLocalSource(media MediaFile) error {
+	if media.GetSourcePath() != "" {
+		return nil
+	}
+
+	tempFile, err := f.DownloadURL(media.GetSourceURL())
+	if err != nil {
+		return fmt.Errorf("error downloading URL: %w", err)
+	}
+
+	media.SetSourcePath(tempFile.Name())
 
 	return nil
 }

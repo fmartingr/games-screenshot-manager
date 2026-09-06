@@ -70,8 +70,40 @@ func countChecks(results []CheckResult, scope, name string) int {
 	return count
 }
 
-// A program an enabled provider needs is a failure when it is missing.
-func TestRunDoctor_ReportsAMissingProgramAsAFailure(t *testing.T) {
+// A program a provider cannot run without is a failure, and it sets the exit
+// code. exiftool is one: initialising it returns an error that aborts the
+// provider.
+func TestRunDoctor_ReportsAMissingRequiredProgramAsAFailure(t *testing.T) {
+	stubLookPath(t)
+
+	config := newDoctorConfig(t)
+	config.Providers.PlayStation4.Enabled = Ptr(true)
+	config.Providers.PlayStation4.Path = Ptr(t.TempDir())
+
+	results := RunDoctor(config, "config.toml")
+
+	result, found := findCheck(results, scopeDependencies, "exiftool")
+	if !found {
+		t.Fatal("the report holds no exiftool check")
+	}
+
+	if result.Status != CheckFail {
+		t.Errorf("exiftool status = %q, want %q", result.Status, CheckFail)
+	}
+
+	if !strings.Contains(result.Remedy, "exiftool") {
+		t.Errorf("exiftool remedy = %q, want it to name the exiftool package", result.Remedy)
+	}
+
+	if !HasFailure(results) {
+		t.Error("HasFailure() = false, want true")
+	}
+}
+
+// A program a provider works without is a warning, and it must not set the
+// exit code. ffprobe is one: without it a clip keeps its end time, and the
+// clip is still collected.
+func TestRunDoctor_ReportsAMissingOptionalProgramAsAWarning(t *testing.T) {
 	stubLookPath(t)
 
 	config := newDoctorConfig(t)
@@ -85,16 +117,20 @@ func TestRunDoctor_ReportsAMissingProgramAsAFailure(t *testing.T) {
 		t.Fatal("the report holds no ffprobe check")
 	}
 
-	if result.Status != CheckFail {
-		t.Errorf("ffprobe status = %q, want %q", result.Status, CheckFail)
+	if result.Status != CheckWarn {
+		t.Errorf("ffprobe status = %q, want %q", result.Status, CheckWarn)
 	}
 
 	if !strings.Contains(result.Remedy, "ffmpeg") {
 		t.Errorf("ffprobe remedy = %q, want it to name the ffmpeg package", result.Remedy)
 	}
 
-	if !HasFailure(results) {
-		t.Error("HasFailure() = false, want true")
+	if !strings.Contains(result.Remedy, "end time") {
+		t.Errorf("ffprobe remedy = %q, want it to say what the run loses", result.Remedy)
+	}
+
+	if HasFailure(results) {
+		t.Error("HasFailure() = true, want false: the run works without ffprobe")
 	}
 }
 
@@ -369,5 +405,39 @@ func TestTakesColor_RefusesAWriterThatIsNotATerminal(t *testing.T) {
 
 	if takesColor(&bytes.Buffer{}) {
 		t.Error("takesColor() = true for a buffer, want false")
+	}
+}
+
+// The doctor reports on the system. It must leave the system as it found it,
+// so it creates no directory, the Steam client's cache included.
+func TestRunDoctor_CreatesNoDirectory(t *testing.T) {
+	stubLookPath(t, "exiftool", "ffprobe", "ffmpeg")
+
+	cacheHome := t.TempDir()
+	t.Setenv("XDG_CACHE_HOME", cacheHome)
+
+	config := &Config{}
+	config.Defaults()
+	config.OutputPath = t.TempDir()
+	config.Providers.Steam.Enabled = Ptr(true)
+	// Without a key the provider refuses to start, and the Steam client that
+	// builds the cache is never reached.
+	config.Providers.Steam.APIKey = "test-key"
+	config.Gallery.Create = true
+
+	RunDoctor(config, "config.toml")
+
+	entries, err := os.ReadDir(cacheHome)
+	if err != nil {
+		t.Fatalf("failed to read the cache home: %v", err)
+	}
+
+	if len(entries) != 0 {
+		names := make([]string, 0, len(entries))
+		for _, entry := range entries {
+			names = append(names, entry.Name())
+		}
+
+		t.Errorf("the doctor left %d entries under the cache home: %q", len(entries), names)
 	}
 }

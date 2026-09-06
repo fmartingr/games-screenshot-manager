@@ -25,6 +25,14 @@ type Requirement struct {
 	Package string
 	// Reason is why the provider needs the program, in one short phrase.
 	Reason string
+	// Optional marks a program the provider works without. The doctor reports
+	// a missing one as a warning rather than a failure, and it does not set
+	// the exit code. Degraded is not broken: the run still collects the media,
+	// with whatever the program would have improved left as it is.
+	Optional bool
+	// Degradation says what the run loses without the program, in one short
+	// phrase. It is read for an optional requirement only.
+	Degradation string
 }
 
 // Requirer is an optional interface. A provider that needs an external program

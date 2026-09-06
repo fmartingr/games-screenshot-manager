@@ -36,20 +36,18 @@ type cacheMetadata struct {
 	TTL *time.Time `json:"TTL,omitempty"`
 }
 
-// newFileCache creates the cache directory for name under the user's cache
-// directory.
+// newFileCache names the cache directory for name under the user's cache
+// directory. It creates nothing: the directory is made by the first write.
+//
+// A command that reads no cache therefore leaves no directory behind, which is
+// what lets the doctor report on the system without changing it.
 func newFileCache(name string) (*fileCache, error) {
 	userCacheDir, err := os.UserCacheDir()
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve the user cache directory: %w", err)
 	}
 
-	path := filepath.Join(userCacheDir, name)
-	if err := os.MkdirAll(path, 0755); err != nil {
-		return nil, fmt.Errorf("could not create the cache directory: %w", err)
-	}
-
-	return &fileCache{path: path}, nil
+	return &fileCache{path: filepath.Join(userCacheDir, name)}, nil
 }
 
 // Get returns the payload for key. Anything it cannot use is a miss, and it
@@ -103,6 +101,13 @@ func (c *fileCache) Set(key string, value []byte, ttl time.Duration) error {
 	contents, err := json.Marshal(metadata)
 	if err != nil {
 		return fmt.Errorf("error marshalling the cache metadata: %w", err)
+	}
+
+	// The directory is made here rather than in the constructor, so a command
+	// that only reads leaves nothing behind. A write needs it, and the
+	// temporary file writeFileAtomic makes needs it too.
+	if err := os.MkdirAll(c.path, 0755); err != nil {
+		return fmt.Errorf("could not create the cache directory: %w", err)
 	}
 
 	if err := writeFileAtomic(c.pathFor(key), value); err != nil {

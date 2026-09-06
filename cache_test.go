@@ -251,3 +251,56 @@ func TestFileCache_GetClearsAnOrphanPayload(t *testing.T) {
 		t.Errorf("the orphan payload is still on disk")
 	}
 }
+
+// The constructor names the directory. It must not create it, so a command
+// that only reports leaves nothing behind.
+func TestNewFileCache_CreatesNoDirectory(t *testing.T) {
+	cacheHome := t.TempDir()
+	t.Setenv("XDG_CACHE_HOME", cacheHome)
+
+	cache, err := newFileCache("games-screenshot-manager")
+	if err != nil {
+		t.Fatalf("newFileCache() returned an error: %v", err)
+	}
+
+	if _, err := os.Stat(cache.path); !os.IsNotExist(err) {
+		t.Errorf("the cache directory exists at %q, want it absent until the first write", cache.path)
+	}
+}
+
+// A read against a directory that is not there is a miss, not a failure.
+func TestFileCache_GetIsAMissWithoutTheDirectory(t *testing.T) {
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+
+	cache, err := newFileCache("games-screenshot-manager")
+	if err != nil {
+		t.Fatalf("newFileCache() returned an error: %v", err)
+	}
+
+	if _, err := cache.Get("absent"); !errors.Is(err, errCacheKeyNotFound) {
+		t.Errorf("Get() error = %v, want %v", err, errCacheKeyNotFound)
+	}
+}
+
+// The first write makes the directory, so the cache still works.
+func TestFileCache_SetCreatesTheDirectory(t *testing.T) {
+	t.Setenv("XDG_CACHE_HOME", t.TempDir())
+
+	cache, err := newFileCache("games-screenshot-manager")
+	if err != nil {
+		t.Fatalf("newFileCache() returned an error: %v", err)
+	}
+
+	if err := cache.Set("key", []byte("value"), time.Hour); err != nil {
+		t.Fatalf("Set() returned an error: %v", err)
+	}
+
+	contents, err := cache.Get("key")
+	if err != nil {
+		t.Fatalf("Get() returned an error: %v", err)
+	}
+
+	if string(contents) != "value" {
+		t.Errorf("Get() = %q, want %q", contents, "value")
+	}
+}

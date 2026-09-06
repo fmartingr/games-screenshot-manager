@@ -355,8 +355,10 @@ func addUses(uses map[string][]RequirementUse, name string, requirements []Requi
 }
 
 // checkRequirements looks for each program once, whichever component asked for
-// it. A program only the gallery wants is a warning, because the gallery is
-// built without it. A program a provider wants is a failure.
+// it. A missing program is a failure only when something cannot run without
+// it. It is a warning when every component that asked can work without it:
+// the gallery, which is built either way, and a provider that marked the
+// requirement optional.
 func checkRequirements(uses map[string][]RequirementUse) []CheckResult {
 	binaries := make([]string, 0, len(uses))
 	for binary := range uses {
@@ -386,12 +388,13 @@ func checkRequirements(uses map[string][]RequirementUse) []CheckResult {
 		}
 
 		result.Status = CheckFail
-		if onlyTheGalleryWants(group) {
+		if everyUseCanDoWithout(group) {
 			result.Status = CheckWarn
 		}
 
 		result.Detail = "not found in PATH"
-		result.Remedy = fmt.Sprintf("Install the %s package. It is wanted by %s.", group[0].Requirement.Package, describeUses(group))
+		result.Remedy = fmt.Sprintf("Install the %s package. It is wanted by %s.%s",
+			group[0].Requirement.Package, describeUses(group), describeDegradation(group))
 
 		results = append(results, result)
 	}
@@ -399,15 +402,35 @@ func checkRequirements(uses map[string][]RequirementUse) []CheckResult {
 	return results
 }
 
-// onlyTheGalleryWants reports a program no provider asked for.
-func onlyTheGalleryWants(group []RequirementUse) bool {
+// everyUseCanDoWithout reports a program that nothing needs to run. The
+// gallery is built without any program it asks for, and a provider says so for
+// itself with Requirement.Optional.
+func everyUseCanDoWithout(group []RequirementUse) bool {
 	for _, use := range group {
-		if use.Provider != "gallery" {
+		if use.Provider != "gallery" && !use.Requirement.Optional {
 			return false
 		}
 	}
 
 	return true
+}
+
+// describeDegradation names what a run loses without an optional program. It
+// returns an empty string when no use declares one, so the remedy reads the
+// same as before for a program that is simply needed.
+func describeDegradation(group []RequirementUse) string {
+	parts := make([]string, 0, len(group))
+	for _, use := range group {
+		if use.Requirement.Optional && use.Requirement.Degradation != "" {
+			parts = append(parts, use.Requirement.Degradation)
+		}
+	}
+
+	if len(parts) == 0 {
+		return ""
+	}
+
+	return " Without it, " + strings.Join(parts, ", and ") + "."
 }
 
 // describeUses names every component that wants a program, and why.
