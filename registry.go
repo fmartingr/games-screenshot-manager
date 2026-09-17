@@ -62,6 +62,15 @@ func (r *ProviderRegistry) registerProviders() error {
 		r.registerProvider("world_of_warcraft", worldOfWarcraftProvider)
 	}
 
+	if r.config.Providers.DiabloIV.IsEnabled() {
+		diabloIVProvider, err := NewDiabloIVProvider(*r.config, r.gameManager, r.fileManager)
+		if err != nil {
+			return fmt.Errorf("failed to create diablo iv provider: %w", err)
+		}
+
+		r.registerProvider("diablo_4", diabloIVProvider)
+	}
+
 	if r.config.Providers.Minecraft.IsEnabled() {
 		minecraftProvider, err := NewMinecraftProvider(*r.config, r.gameManager, r.fileManager)
 		if err != nil {

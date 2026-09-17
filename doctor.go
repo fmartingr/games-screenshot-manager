@@ -110,6 +110,25 @@ type doctorProvider struct {
 	// autoPath reports a provider that can find its own path. A provider
 	// without one needs a path in the config.
 	autoPath bool
+	// autoPlatforms are the values of runtime.GOOS where the provider finds
+	// its own path. It is read only for a provider that carries autoPath, and
+	// an empty list there means every platform.
+	autoPlatforms []string
+}
+
+// findsPathHere reports a provider that finds its own path on this host.
+func (p doctorProvider) findsPathHere() bool {
+	if len(p.autoPlatforms) == 0 {
+		return true
+	}
+
+	for _, platform := range p.autoPlatforms {
+		if platform == runtime.GOOS {
+			return true
+		}
+	}
+
+	return false
 }
 
 // RunDoctor checks the configuration and the system. It writes no file, it
@@ -180,15 +199,16 @@ func checkOutputPath(config *Config) CheckResult {
 // checkProviders reports one line per enabled provider.
 func checkProviders(config *Config) []CheckResult {
 	providers := []doctorProvider{
-		{name: "steam", path: "auto", autoPath: true},
-		{name: "guild_wars_2", path: config.Providers.GuildWars2.GetPath(), autoPath: true},
-		{name: "world_of_warcraft", path: config.Providers.WorldOfWarcraft.GetPath(), autoPath: true},
-		{name: "minecraft", path: config.Providers.Minecraft.GetPath(), autoPath: true},
-		{name: "hytale", path: config.Providers.Hytale.GetPath(), autoPath: true},
-		{name: "nintendo_switch_2", path: config.Providers.NintendoSwitch2.GetPath(), autoPath: true},
+		{name: "steam", path: "auto", autoPath: true, autoPlatforms: []string{"darwin", "linux", "windows"}},
+		{name: "guild_wars_2", path: config.Providers.GuildWars2.GetPath(), autoPath: true, autoPlatforms: []string{"windows"}},
+		{name: "world_of_warcraft", path: config.Providers.WorldOfWarcraft.GetPath(), autoPath: true, autoPlatforms: []string{"darwin", "windows"}},
+		{name: "minecraft", path: config.Providers.Minecraft.GetPath(), autoPath: true, autoPlatforms: []string{"darwin", "linux", "windows"}},
+		{name: "diablo_4", path: config.Providers.DiabloIV.GetPath(), autoPath: true, autoPlatforms: []string{"windows"}},
+		{name: "hytale", path: config.Providers.Hytale.GetPath(), autoPath: true, autoPlatforms: []string{"darwin", "linux"}},
+		{name: "nintendo_switch_2", path: config.Providers.NintendoSwitch2.GetPath(), autoPath: true, autoPlatforms: []string{"linux"}},
 		{name: "playstation4", path: config.Providers.PlayStation4.GetPath(), autoPath: false},
 		{name: "playstation5", path: config.Providers.PlayStation5.GetPath(), autoPath: false},
-		{name: "xbox_game_bar", path: config.Providers.XboxGameBar.GetPath(), autoPath: true},
+		{name: "xbox_game_bar", path: config.Providers.XboxGameBar.GetPath(), autoPath: true, autoPlatforms: []string{"windows"}},
 	}
 
 	enabled := map[string]bool{
@@ -196,6 +216,7 @@ func checkProviders(config *Config) []CheckResult {
 		"guild_wars_2":      config.Providers.GuildWars2.IsEnabled(),
 		"world_of_warcraft": config.Providers.WorldOfWarcraft.IsEnabled(),
 		"minecraft":         config.Providers.Minecraft.IsEnabled(),
+		"diablo_4":          config.Providers.DiabloIV.IsEnabled(),
 		"hytale":            config.Providers.Hytale.IsEnabled(),
 		"nintendo_switch_2": config.Providers.NintendoSwitch2.IsEnabled(),
 		"playstation4":      config.Providers.PlayStation4.IsEnabled(),
@@ -254,6 +275,14 @@ func checkProvider(provider doctorProvider) CheckResult {
 			result.Status = CheckFail
 			result.Detail = "enabled, but it has no path"
 			result.Remedy = "This provider cannot find its own path. Set path in [providers." + provider.name + "]."
+
+			return result
+		}
+
+		if !provider.findsPathHere() {
+			result.Status = CheckWarn
+			result.Detail = "enabled, but this host runs " + runtime.GOOS + ", where it finds no path of its own"
+			result.Remedy = "Set path in [providers." + provider.name + "], or disable the provider."
 
 			return result
 		}

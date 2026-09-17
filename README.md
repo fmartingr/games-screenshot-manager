@@ -8,6 +8,7 @@ A simple tool to collect and sort games screenshots from different platforms.
 
 - Collect screenshots taken from different platforms/games. See [Supported providers](#supported-providers) for the list of supported providers.
   - **Steam**
+  - **Diablo IV**
   - **Guild Wars 2**
   - **Hytale**
   - **Minecraft**
@@ -59,6 +60,21 @@ If no `-config` flag is provided, the binary will look for a `config.toml` file 
 - macOS: `~/Library/Application Support/games-screenshot-manager/config.toml`
 
 ## Supported providers
+
+### Diablo IV
+
+- **Supported platforms**: Windows (other platforms require a custom path)
+- **Screenshots**: Yes
+- **Clips**: Not supported by the game
+- **Recordings**: Not supported by the game
+
+The game names every screenshot `Screenshot001.jpg`, and it counts up from there. The counter starts again on each computer, so one name stands for two different screenshots across two computers. Each file is therefore renamed to the date and the time it was written.
+
+Two screenshots taken in one second still meet under one name. The hash of the second file then goes into its name, so nothing is lost.
+
+The date comes from the time the file was written, because the game writes no capture date into the file. Copy the folder with a tool that keeps the timestamps, such as `rsync -t`, `cp -p` or `robocopy`. A plain copy sets the time of the copy on every file, and the screenshots are then named after the day you moved them.
+
+`auto` reads the two folders the game writes to on Windows: `Pictures\Diablo IV` and `Documents\Diablo IV\Screenshots`. A folder that is not there is skipped. Set `path` for any other platform, as in a copy of the folder or a Proton prefix.
 
 ### Guild Wars 2
 

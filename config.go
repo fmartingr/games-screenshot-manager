@@ -30,6 +30,7 @@ func (c *Config) Defaults() {
 
 // Providers represents all game provider configurations
 type Providers struct {
+	DiabloIV        ProviderConfig        `toml:"diablo_4"`
 	GuildWars2      ProviderConfig        `toml:"guild_wars_2"`
 	Hytale          ProviderConfig        `toml:"hytale"`
 	Minecraft       ProviderConfig        `toml:"minecraft"`
@@ -188,6 +189,7 @@ func NewConfig(path string) (*Config, error) {
 	config.Providers.GuildWars2.Merge(&config.Global)
 	config.Providers.Hytale.Merge(&config.Global)
 	config.Providers.NintendoSwitch2.Merge(&config.Global)
+	config.Providers.DiabloIV.Merge(&config.Global)
 
 	return config, nil
 }

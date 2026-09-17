@@ -55,6 +55,19 @@ FooterText = "fmartingr's personal screenshot collection, copyright their respec
 # set to `auto` (the default) to automatically determine the folder where the screenshots are. This is not compatible with
 # all providers or in platforms the games is not available.
 
+# DIABLO IV
+# The game names every screenshot Screenshot001.jpg, and it counts up from there.
+# The counter starts again on each computer, so the provider renames each file to
+# the date and the time it was written.
+[providers.diablo_4]
+# Enable/disable the provider.
+enabled = false
+
+# This option will specify the path to the screenshots folder.
+# 'auto' reads the two folders the game writes to on Windows:
+# 'Pictures\Diablo IV' and 'Documents\Diablo IV\Screenshots'.
+path = "auto"
+
 # GUILD WARS 2
 # This provider needs `exiftool` on your system.
 [providers.guild_wars_2]

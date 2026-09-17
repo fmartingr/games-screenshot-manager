@@ -490,3 +490,83 @@ func TestRunDoctor_WantsNoLibmtpToolForAnAlbumFolder(t *testing.T) {
 		t.Error("HasFailure() = true, want false")
 	}
 }
+
+// findsPathHere reads autoPlatforms, and an empty list means every platform.
+func TestDoctorProvider_FindsPathHere(t *testing.T) {
+	every := doctorProvider{name: "every", autoPath: true}
+	if !every.findsPathHere() {
+		t.Errorf("a provider without a list reports %s as unsupported", runtime.GOOS)
+	}
+
+	here := doctorProvider{name: "here", autoPath: true, autoPlatforms: []string{runtime.GOOS}}
+	if !here.findsPathHere() {
+		t.Errorf("a provider that names %s reports it as unsupported", runtime.GOOS)
+	}
+
+	elsewhere := doctorProvider{name: "elsewhere", autoPath: true, autoPlatforms: []string{"plan9"}}
+	if elsewhere.findsPathHere() {
+		t.Errorf("a provider that names plan9 only reports %s as supported", runtime.GOOS)
+	}
+}
+
+// A provider that finds no path on this host is a warning, not a pass. The run
+// would otherwise collect nothing and say so only in its log.
+func TestRunDoctor_WarnsWhereAProviderFindsNoPath(t *testing.T) {
+	stubLookPath(t, "exiftool")
+
+	config := newDoctorConfig(t)
+	config.Providers.GuildWars2.Enabled = Ptr(true)
+
+	results := RunDoctor(config, "config.toml")
+
+	result, found := findCheck(results, scopeProviders, "guild_wars_2")
+	if !found {
+		t.Fatalf("the report holds no guild_wars_2 check")
+	}
+
+	// The provider finds its own path on Windows, and nowhere else.
+	if runtime.GOOS == "windows" {
+		if result.Status != CheckOK {
+			t.Errorf("status = %q, want %q on windows", result.Status, CheckOK)
+		}
+
+		return
+	}
+
+	if result.Status != CheckWarn {
+		t.Fatalf("status = %q, want %q on %s", result.Status, CheckWarn, runtime.GOOS)
+	}
+
+	if !strings.Contains(result.Detail, runtime.GOOS) {
+		t.Errorf("detail = %q, want it to name %s", result.Detail, runtime.GOOS)
+	}
+
+	if !strings.Contains(result.Remedy, "[providers.guild_wars_2]") {
+		t.Errorf("remedy = %q, want it to name the config section", result.Remedy)
+	}
+
+	// A warning is not a failure: the run still works with a path in the config.
+	if HasFailure(results) {
+		t.Error("HasFailure() = true, want false")
+	}
+}
+
+// A path in the config answers for every platform, so the host stops mattering.
+func TestRunDoctor_TakesAPathWhereAProviderFindsNone(t *testing.T) {
+	stubLookPath(t, "exiftool")
+
+	config := newDoctorConfig(t)
+	config.Providers.GuildWars2.Enabled = Ptr(true)
+	config.Providers.GuildWars2.Path = Ptr(t.TempDir())
+
+	results := RunDoctor(config, "config.toml")
+
+	result, found := findCheck(results, scopeProviders, "guild_wars_2")
+	if !found {
+		t.Fatalf("the report holds no guild_wars_2 check")
+	}
+
+	if result.Status != CheckOK {
+		t.Errorf("status = %q, want %q", result.Status, CheckOK)
+	}
+}
