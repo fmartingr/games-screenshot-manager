@@ -96,6 +96,11 @@ func (p *WorldOfWarcraftProvider) GetScreenshots() error {
 		}
 	}
 
+	// Only add game if it has screenshots
+	if len(game.Screenshots) > 0 {
+		p.gameManager.AddGame(game)
+	}
+
 	return nil
 }
 
