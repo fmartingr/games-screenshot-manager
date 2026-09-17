@@ -155,7 +155,7 @@ func TestDiabloIVReadsOnPastAnUnreadableFolder(t *testing.T) {
 	if err := os.Mkdir(closed, 0000); err != nil {
 		t.Fatalf("could not create the directory: %v", err)
 	}
-	t.Cleanup(func() { os.Chmod(closed, 0755) })
+	t.Cleanup(func() { _ = os.Chmod(closed, 0755) })
 
 	provider := newDiabloIVProvider(t, dir)
 	// Both folders are read, and the one that refuses is only logged.

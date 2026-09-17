@@ -2,6 +2,7 @@ package gamesscreenshotmanager
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 )
@@ -115,9 +116,25 @@ func TestParsePlaystationDatetime(t *testing.T) {
 	}
 }
 
+// requireExiftool skips a test that cannot run without the program. The
+// PlayStation 4 provider reads the capture date out of the EXIF data, so it
+// initializes exiftool before it reads a folder.
+//
+// CI installs the program, so the test runs there. This keeps the suite green
+// for a contributor who does not hold it.
+func requireExiftool(t *testing.T) {
+	t.Helper()
+
+	if _, err := exec.LookPath("exiftool"); err != nil {
+		t.Skip("exiftool is not in PATH, and the provider cannot read a capture date without it")
+	}
+}
+
 // A file the provider does not read used to reach an unassigned media pointer,
 // and the walk panicked on it.
 func TestPlaystation4ProviderSkipsAnUnknownExtension(t *testing.T) {
+	requireExiftool(t)
+
 	base := t.TempDir()
 	gameDir := filepath.Join(base, "Bloodborne")
 	if err := os.MkdirAll(gameDir, 0755); err != nil {

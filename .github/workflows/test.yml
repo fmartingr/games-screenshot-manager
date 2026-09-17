@@ -26,6 +26,17 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: ./go.mod
+      # The PlayStation 4 provider reads the capture date out of the EXIF data,
+      # so its test cannot run without the program. The test skips where the
+      # program is absent, and this step is what makes it run here instead.
+      - name: Install exiftool
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            brew install exiftool
+          else
+            sudo apt-get update
+            sudo apt-get install -y libimage-exiftool-perl
+          fi
       - name: Check the formatting
         run: |
           unformatted="$(gofmt -l .)"
