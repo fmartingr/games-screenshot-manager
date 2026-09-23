@@ -541,6 +541,8 @@
 
                 function sortItems() {
                     const galleryFiles = document.querySelector('.gallery.files');
+                    // A page with only folders, such as the root, has no file list.
+                    if (!galleryFiles) return;
                     const fileItems = Array.from(galleryFiles.querySelectorAll('li'));
 
                     fileItems.sort((a, b) => {
