@@ -71,7 +71,8 @@ func NewGalleryBuilder(config Config) (*GalleryBuilder, error) {
 func (b *GalleryBuilder) Build() (*GalleryNode, error) {
 	b.log.Info("building gallery", slog.String("output_path", b.Config.OutputPath))
 
-	outputPath := expandUser(filepath.Join("./", b.Config.OutputPath))
+	// Joining with "./" would drop the leading slash of an absolute path.
+	outputPath := filepath.Clean(expandUser(b.Config.OutputPath))
 
 	b.Root = &GalleryNode{
 		Title: b.Config.Gallery.SiteTitle,
