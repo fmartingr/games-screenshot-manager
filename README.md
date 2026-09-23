@@ -1,7 +1,7 @@
+> [!IMPORTANT]
+> **This project is not going to be actively maintaned anymore. I will review PRs or let contributors into it if needed, but my efforts are going into a replacement of this: [Gaming Memories](https://fmartingr.github.io/gaming-memories)**
+
 # Games Screenshot Manager
-
-[![Go Report Card](https://goreportcard.com/badge/github.com/fmartingr/games-screenshot-manager)](https://goreportcard.com/report/github.com/fmartingr/games-screenshot-manager)
-
 A simple tool to collect and sort games screenshots from different platforms.
 
 ## Features
