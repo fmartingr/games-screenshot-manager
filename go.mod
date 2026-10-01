@@ -8,8 +8,8 @@ require (
 	github.com/lmittmann/tint v1.2.0
 	github.com/pelletier/go-toml/v2 v2.4.3
 	github.com/stretchr/testify v1.12.1
-	golang.org/x/image v0.45.0
-	golang.org/x/text v0.41.0
+	golang.org/x/image v0.46.0
+	golang.org/x/text v0.42.0
 )
 
 require (
